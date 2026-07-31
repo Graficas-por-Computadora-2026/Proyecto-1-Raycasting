@@ -1,3 +1,7 @@
+mod framebuffer;
+
+use framebuffer::Framebuffer;
+use raylib::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -12,8 +16,6 @@ pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
 }
 
 type Maze = Vec<Vec<char>>;
-
-let maze = load_maze("./maze.txt");
 
 fn draw_cell(
     framebuffer: &mut Framebuffer,
@@ -55,4 +57,29 @@ pub fn render_maze(
             draw_cell(framebuffer, xo, yo, block_size, cell);
         }
     }
-}D
+}
+
+fn main() {
+    let window_width = 800;
+    let window_height = 600;
+
+    let (mut window, raylib_thread) = raylib::init()
+        .size(window_width, window_height)
+        .title("Mundo 3D")
+        .log_level(TraceLogLevel::LOG_WARNING)
+        .build();
+
+    let mut framebuffer = Framebuffer::new(
+        window_width as u32,
+        window_height as u32,
+        Color::BLACK,
+    );
+
+    let maze = load_maze("./maze.txt");
+
+    while !window.window_should_close() {
+        framebuffer.clear();
+        render_maze(&mut framebuffer, &maze, 50);
+        framebuffer.swap_buffers(&mut window, &raylib_thread);
+    }
+}
