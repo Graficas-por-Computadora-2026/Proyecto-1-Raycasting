@@ -9,6 +9,14 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
     pub fn new(width: u32, height: u32, background_color: Color) -> Self {
         let color_buffer = Image::gen_image_color(
             width as i32,
