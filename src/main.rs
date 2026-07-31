@@ -22,7 +22,7 @@ pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
         .collect()
 }
 
-type Maze = Vec<Vec<char>>;
+pub type Maze = Vec<Vec<char>>;
 
 fn draw_cell(
     framebuffer: &mut Framebuffer,
@@ -34,7 +34,13 @@ fn draw_cell(
     // pinten un rectangulo de diferente color segun cada char
 
     let color = match cell {
-        '+' | '-' | '|' => Color::BLACK,
+        '+' | '-' | '|' => {
+            if (xo / block_size + yo / block_size) % 2 == 0 {
+                Color::BLACK
+            } else {
+                Color::DARKGRAY
+            }
+        }
         ' ' => Color::WHITE,
         'p' => Color::GREEN,
         'g' => Color::RED,
@@ -66,7 +72,74 @@ pub fn render_maze(
     }
 }
 
-fn render_world(_framebuffer: &mut Framebuffer, _player: &Player) {}
+fn render_world(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    block_size: usize,
+) {
+    let num_rays = framebuffer.width();
+
+    let hw = framebuffer.width() as f32 / 2.0;   // precalculated half width
+    let hh = framebuffer.height() as f32 / 2.0;  // precalculated half height
+
+    let horizon = hh as u32;
+
+    framebuffer.set_current_color(Color::new(135, 206, 235, 255));
+    for y in 0..horizon {
+        for x in 0..framebuffer.width() {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+
+    framebuffer.set_current_color(Color::new(90, 70, 50, 255));
+    for y in horizon..framebuffer.height() {
+        for x in 0..framebuffer.width() {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+
+    for i in 0..num_rays {
+        let current_ray = i as f32 / num_rays as f32; // current ray divided by total rays
+        let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
+
+        let intersect = cast_ray(
+            framebuffer,
+            &maze,
+            player,
+            a,
+            block_size,
+            false,
+        );
+
+        // Calculate the height of the stake
+        let distance_to_wall = intersect.distance * (player.a - a).cos(); // fish-eye correction
+        let distance_to_projection_plane = hw / (player.fov / 2.0).tan(); // distance from the "camera"
+
+        if intersect.impact == 'g' {
+            framebuffer.set_current_color(Color::RED);
+        } else if (intersect.cell_x + intersect.cell_y) % 2 == 0 {
+            framebuffer.set_current_color(Color::BLACK);
+        } else {
+            framebuffer.set_current_color(Color::DARKGRAY);
+        }
+
+        // this ratio doesn't really matter as long as it is a function of distance
+        let distance_to_wall = distance_to_wall.max(1.0);
+        let stake_height =
+            (block_size as f32 / distance_to_wall) * distance_to_projection_plane;
+
+        // Calculate the position to draw the stake
+        let stake_top = (hh - (stake_height / 2.0)).max(0.0) as u32;
+        let stake_bottom = (hh + (stake_height / 2.0))
+            .min(framebuffer.height() as f32) as u32;
+
+        // Draw the stake directly in the framebuffer
+        for y in stake_top..stake_bottom {
+            framebuffer.set_pixel(i, y);
+        }
+    }
+}
 
 fn main() {
     let window_width = 800;
@@ -89,49 +162,52 @@ fn main() {
 
     let mut player = Player {
         pos: Vector2::new(75.0, 75.0),
-        a: PI / 3.0,
+        a: 0.0,
         fov: PI / 3.0,
     };
+
+    let mut mode_3d = false;
+    let mut m_was_down = false;
 
     while !window.window_should_close() {
         // 1. clear framebuffer
         framebuffer.clear();
 
         // 2. move the player on user input
-        process_events(&window, &mut player);
+        process_events(&window, &mut player, &maze, block_size);
 
-        let mut mode = "2D";
-
-        if window.is_key_down(KeyboardKey::KEY_M) {
-            mode = if mode == "2D" { "3D" } else { "2D" };
+        let m_is_down = window.is_key_down(KeyboardKey::KEY_M);
+        if m_is_down && !m_was_down {
+            mode_3d = !mode_3d;
         }
+        m_was_down = m_is_down;
 
         // Clear the framebuffer
         framebuffer.clear();
 
         // 3. draw stuff
-        if mode == "2D" {
+        if !mode_3d {
             render_maze(&mut framebuffer, &maze, block_size);
             framebuffer.set_current_color(Color::GREEN);
             framebuffer.set_pixel(player.pos.x as u32, player.pos.y as u32);
+
+            let num_rays = 5;
+
+            for i in 0..num_rays {
+                let current_ray = i as f32 / num_rays as f32;
+                let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
+
+                cast_ray(
+                    &mut framebuffer,
+                    &maze,
+                    &player,
+                    a,
+                    block_size,
+                    true,
+                );
+            }
         } else {
-            render_world(&mut framebuffer, &player);
-        }
-
-        // draw what the player sees
-        let num_rays = 5;
-
-        for i in 0..num_rays {
-            let current_ray = i as f32 / num_rays as f32;
-            let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
-
-            cast_ray(
-                &mut framebuffer,
-                &maze,
-                &player,
-                a,
-                block_size,
-            );
+            render_world(&mut framebuffer, &maze, &player, block_size);
         }
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
