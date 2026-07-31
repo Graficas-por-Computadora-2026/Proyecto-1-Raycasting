@@ -8,3 +8,4 @@ opt-level = 3
 debug = false
 
 [dependencies]
+raylib = "5.5.1"
