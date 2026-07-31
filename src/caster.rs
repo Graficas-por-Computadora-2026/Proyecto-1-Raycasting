@@ -9,6 +9,7 @@ pub fn cast_ray(
     framebuffer: &mut Framebuffer,
     maze: &Vec<Vec<char>>,
     player: &Player,
+    an: f32,
     block_size: usize,
 ) {
     let mut d = 0.0;
@@ -16,8 +17,8 @@ pub fn cast_ray(
     framebuffer.set_current_color(Color::GREEN);
 
     loop {
-        let cos = d * player.a.cos();
-        let sin = d * player.a.sin();
+        let cos = d * an.cos();
+        let sin = d * an.sin();
 
         let x = (player.pos.x + cos) as usize;
         let y = (player.pos.y + sin) as usize;
