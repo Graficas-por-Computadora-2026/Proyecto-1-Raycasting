@@ -8,6 +8,7 @@ use framebuffer::Framebuffer;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -65,9 +66,12 @@ pub fn render_maze(
     }
 }
 
+fn render_world(_framebuffer: &mut Framebuffer, _player: &Player) {}
+
 fn main() {
     let window_width = 800;
     let window_height = 600;
+    let block_size = 50;
 
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
@@ -81,24 +85,55 @@ fn main() {
         Color::BLACK,
     );
 
-    let maze = load_maze("./maze.txt");
+    let maze = load_maze("maze.txt");
+
     let mut player = Player {
         pos: Vector2::new(75.0, 75.0),
-        a: 0.0,
+        a: PI / 3.0,
+        fov: PI / 3.0,
     };
 
     while !window.window_should_close() {
-        process_events(&window, &mut player);
+        // 1. clear framebuffer
         framebuffer.clear();
-        render_maze(&mut framebuffer, &maze, 50);
-        draw_cell(
-            &mut framebuffer,
-            (player.pos.x as usize / 50) * 50,
-            (player.pos.y as usize / 50) * 50,
-            50,
-            'p',
-        );
-        cast_ray(&mut framebuffer, &maze, &player, 50);
+
+        // 2. move the player on user input
+        process_events(&window, &mut player);
+
+        let mut mode = "2D";
+
+        if window.is_key_down(KeyboardKey::KEY_M) {
+            mode = if mode == "2D" { "3D" } else { "2D" };
+        }
+
+        // Clear the framebuffer
+        framebuffer.clear();
+
+        // 3. draw stuff
+        if mode == "2D" {
+            render_maze(&mut framebuffer, &maze, block_size);
+            framebuffer.set_current_color(Color::GREEN);
+            framebuffer.set_pixel(player.pos.x as u32, player.pos.y as u32);
+        } else {
+            render_world(&mut framebuffer, &player);
+        }
+
+        // draw what the player sees
+        let num_rays = 5;
+
+        for i in 0..num_rays {
+            let current_ray = i as f32 / num_rays as f32;
+            let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
+
+            cast_ray(
+                &mut framebuffer,
+                &maze,
+                &player,
+                a,
+                block_size,
+            );
+        }
+
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
 }
