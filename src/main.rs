@@ -1,9 +1,11 @@
 mod framebuffer;
 mod caster;
 mod player;
+mod input;
 
 use caster::cast_ray;
 use framebuffer::Framebuffer;
+use input::process_events;
 use player::Player;
 use raylib::prelude::*;
 use std::fs::File;
@@ -80,12 +82,13 @@ fn main() {
     );
 
     let maze = load_maze("./maze.txt");
-    let player = Player {
+    let mut player = Player {
         pos: Vector2::new(75.0, 75.0),
         a: 0.0,
     };
 
     while !window.window_should_close() {
+        process_events(&window, &mut player);
         framebuffer.clear();
         render_maze(&mut framebuffer, &maze, 50);
         draw_cell(
