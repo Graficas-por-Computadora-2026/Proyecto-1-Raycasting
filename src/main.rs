@@ -289,7 +289,7 @@ fn render_world(
 fn main() {
     let window_width = 800;
     let window_height = 600;
-    let render_width = 1024;
+    let render_width = 1280;
     let block_size = 50;
 
     let (mut window, raylib_thread) = raylib::init()
