@@ -36,15 +36,15 @@ fn draw_cell(
     let color = match cell {
         '+' | '-' | '|' => {
             if (xo / block_size + yo / block_size) % 2 == 0 {
-                Color::BLACK
+                Color::BLUE
             } else {
-                Color::DARKGRAY
+                Color::GREEN
             }
         }
-        ' ' => Color::WHITE,
-        'p' => Color::GREEN,
-        'g' => Color::RED,
-        _ => Color::MAGENTA,
+        ' ' => Color::BLACK,
+        'p' => Color::WHITE,
+        'g' => Color::GRAY,
+        _ => Color::SKYBLUE,
     };
 
     framebuffer.set_current_color(color);
@@ -92,7 +92,7 @@ fn render_world(
         }
     }
 
-    framebuffer.set_current_color(Color::new(90, 70, 50, 255));
+    framebuffer.set_current_color(Color::new(0, 0, 0, 255));
     for y in horizon..framebuffer.height() {
         for x in 0..framebuffer.width() {
             framebuffer.set_pixel(x, y);
@@ -117,11 +117,11 @@ fn render_world(
         let distance_to_projection_plane = hw / (player.fov / 2.0).tan(); // distance from the "camera"
 
         if intersect.impact == 'g' {
-            framebuffer.set_current_color(Color::RED);
+            framebuffer.set_current_color(Color::GRAY);
         } else if (intersect.cell_x + intersect.cell_y) % 2 == 0 {
-            framebuffer.set_current_color(Color::BLACK);
+            framebuffer.set_current_color(Color::BLUE);
         } else {
-            framebuffer.set_current_color(Color::DARKGRAY);
+            framebuffer.set_current_color(Color::GREEN);
         }
 
         // this ratio doesn't really matter as long as it is a function of distance
