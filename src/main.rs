@@ -168,6 +168,7 @@ fn main() {
         .title("Mundo 3D")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
+    window.disable_cursor();
 
     let mut framebuffer = Framebuffer::new(
         window_width as u32,

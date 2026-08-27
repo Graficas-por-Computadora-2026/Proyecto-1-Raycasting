@@ -12,6 +12,9 @@ pub fn process_events(
 ) {
     const MOVE_SPEED: f32 = 2.0;
     const ROTATION_SPEED: f32 = PI / 90.0;
+    const MOUSE_SENSITIVITY: f32 = 0.003;
+
+    player.a += window.get_mouse_delta().x * MOUSE_SENSITIVITY;
 
     if window.is_key_down(KeyboardKey::KEY_LEFT) {
         // rotate the view range to the left
