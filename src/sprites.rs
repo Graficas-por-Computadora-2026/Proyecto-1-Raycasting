@@ -81,8 +81,6 @@ pub fn render_sprite(
     let center_x = framebuffer.width() as f32 / 2.0
         + angle_difference / (player.fov / 2.0) * framebuffer.width() as f32 / 2.0;
     let bob_offset = (time * 3.0).sin() * sprite_height * 0.025;
-    // Anchor sprites on the floor rather than centering them on the horizon.
-    // This keeps their apparent position stable as the player approaches.
     let bottom = framebuffer.height() as f32 / 2.0 + bob_offset;
     let top = bottom - sprite_height;
     let left = center_x - sprite_width / 2.0;

@@ -84,11 +84,9 @@ impl Framebuffer {
             let screen_width = window.get_screen_width();
             let screen_height = window.get_screen_height();
 
-            // the window currently has the "old" data (previous frame)
             let mut renderer = window.begin_drawing(raylib_thread);
             renderer.clear_background(Color::BLACK);
 
-            // we move the "new" data to the window (current frame)
             renderer.draw_texture_pro(
                 &texture,
                 Rectangle::new(0.0, 0.0, self.width as f32, self.height as f32),

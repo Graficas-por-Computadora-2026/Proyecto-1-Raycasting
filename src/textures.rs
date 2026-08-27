@@ -10,14 +10,13 @@ impl TextureManager {
     pub fn new() -> Self {
         let mut images = HashMap::new();
 
-        // Map maze characters to texture file paths.
         let texture_files = vec![
             ('+', "assets/wall.png"),
             ('-', "assets/wall.png"),
             ('|', "assets/wall.png"),
             ('g', "assets/wall.png"),
             ('D', "assets/wall.png"),
-            ('#', "assets/wall.png"), // default/fallback
+            ('#', "assets/wall.png"),
             ('s', "assets/sprite.png"),
         ];
 

@@ -38,7 +38,6 @@ fn spawn_enemy(position: Vector2, kind: EnemyKind, block_size: usize) -> Sprite 
     Sprite {
         pos: position,
         texture: 's',
-        // Slightly larger than a map cell so enemies remain recognizable at distance.
         size: block_size as f32 * 1.25,
         active: true,
         health,
@@ -248,7 +247,6 @@ pub fn update_enemies(
             false,
         );
 
-        // The enemy only reacts when the player is in direct line of sight.
         if distance >= wall.distance {
             continue;
         }
@@ -271,8 +269,6 @@ pub fn update_enemies(
             shots_fired += 1;
         }
 
-        // Attacking does not stop pursuit. Leave only one unit of separation
-        // to avoid overshooting and oscillating around the player.
         if distance > 1.0 {
             let step = (speed * delta_time).min(distance - 1.0);
             let next_position = Vector2::new(
