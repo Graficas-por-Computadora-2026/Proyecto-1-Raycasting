@@ -130,6 +130,7 @@ fn render_world(
     block_size: usize,
     textures: &TextureManager,
     sprites: &[Sprite],
+    time: f32,
 ) {
     let num_rays = framebuffer.width();
     let mut z_buffer = vec![0.0; num_rays as usize];
@@ -201,7 +202,7 @@ fn render_world(
     }
 
     for sprite in sprites {
-        render_sprite(framebuffer, player, sprite, textures, &z_buffer);
+        render_sprite(framebuffer, player, sprite, textures, &z_buffer, time);
     }
 
     let center_x = framebuffer.width() / 2;
@@ -331,6 +332,7 @@ fn main() {
                 block_size,
                 &textures,
                 &sprites,
+                window.get_time() as f32,
             );
             render_minimap(&mut framebuffer, &maze, &player, block_size);
         }
