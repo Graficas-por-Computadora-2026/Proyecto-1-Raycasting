@@ -237,7 +237,15 @@ fn main() {
     let music = audio
         .new_music("assets/guichin.mp3")
         .expect("Failed to load background music");
-    music.set_volume(0.2);
+    let shoot_sound = audio
+        .new_sound("assets/shoot.wav")
+        .expect("Failed to load shoot sound");
+    let hit_sound = audio
+        .new_sound("assets/hit.wav")
+        .expect("Failed to load hit sound");
+    music.set_volume(0.08);
+    shoot_sound.set_volume(0.85);
+    hit_sound.set_volume(0.85);
     music.play_stream();
 
     let maze = load_maze("maze.txt");
@@ -266,7 +274,9 @@ fn main() {
         // 2. move the player on user input
         let shot_fired = process_events(&window, &mut player, &maze, block_size);
 
-        if shot_fired {
+        if shot_fired && mode_3d {
+            shoot_sound.play();
+
             let wall = cast_ray(
                 &mut framebuffer,
                 &maze,
@@ -277,7 +287,9 @@ fn main() {
             );
 
             for sprite in &mut sprites {
-                shoot_sprite(&player, sprite, wall.distance);
+                if shoot_sprite(&player, sprite, wall.distance) {
+                    hit_sound.play();
+                }
             }
         }
 

@@ -11,9 +11,9 @@ pub struct Sprite {
     pub active: bool,
 }
 
-pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) {
+pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) -> bool {
     if !sprite.active {
-        return;
+        return false;
     }
 
     let dx = sprite.pos.x - player.pos.x;
@@ -24,7 +24,10 @@ pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) {
 
     if angle_difference.abs() <= angular_radius && distance < wall_distance {
         sprite.active = false;
+        return true;
     }
+
+    false
 }
 
 pub fn render_sprite(
