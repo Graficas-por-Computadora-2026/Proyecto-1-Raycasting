@@ -323,6 +323,12 @@ fn main() {
     let mut success_screen = false;
 
     while !window.window_should_close() {
+        let screen_width = window.get_screen_width().max(1) as u32;
+        let screen_height = window.get_screen_height().max(1) as u32;
+        if framebuffer.width() != screen_width || framebuffer.height() != screen_height {
+            framebuffer = Framebuffer::new(screen_width, screen_height, Color::BLACK);
+        }
+
         music.update_stream();
 
         if welcome_screen {

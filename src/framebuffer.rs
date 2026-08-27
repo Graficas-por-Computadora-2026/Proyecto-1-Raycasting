@@ -75,6 +75,7 @@ impl Framebuffer {
     ) {
         // we get the "new" data from the new buffer into texture
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
+            texture.set_texture_filter(raylib_thread, TextureFilter::TEXTURE_FILTER_BILINEAR);
             let screen_width = window.get_screen_width();
             let screen_height = window.get_screen_height();
 
