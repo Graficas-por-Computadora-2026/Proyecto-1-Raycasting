@@ -4,6 +4,7 @@ pub struct Framebuffer {
     width: u32,
     height: u32,
     color_buffer: Image,
+    display_texture: Option<Texture2D>,
     background_color: Color,
     current_color: Color,
 }
@@ -28,6 +29,7 @@ impl Framebuffer {
             width,
             height,
             color_buffer,
+            display_texture: None,
             background_color,
             current_color: Color::WHITE,
         }
@@ -66,16 +68,32 @@ impl Framebuffer {
     }
 
     pub fn swap_buffers(
-        &self,
+        &mut self,
         window: &mut RaylibHandle,
         raylib_thread: &RaylibThread,
         show_welcome: bool,
         selected_level: usize,
         show_success: bool,
     ) {
-        // we get the "new" data from the new buffer into texture
-        if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
+        // La textura de presentación se crea una sola vez por tamaño de framebuffer.
+        if self.display_texture.is_none() {
+            let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer)
+            else {
+                return;
+            };
             texture.set_texture_filter(raylib_thread, TextureFilter::TEXTURE_FILTER_BILINEAR);
+            self.display_texture = Some(texture);
+        }
+
+        let pixel_count = (self.width * self.height * 4) as usize;
+        let pixels = unsafe {
+            std::slice::from_raw_parts(self.color_buffer.data() as *const u8, pixel_count)
+        };
+
+        if let Some(texture) = self.display_texture.as_mut() {
+            if texture.update_texture(pixels).is_err() {
+                return;
+            }
             let screen_width = window.get_screen_width();
             let screen_height = window.get_screen_height();
 
