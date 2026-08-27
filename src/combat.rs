@@ -37,7 +37,10 @@ fn spawn_enemy(position: Vector2, kind: EnemyKind, block_size: usize) -> Sprite 
 
     Sprite {
         pos: position,
-        texture: 's',
+        texture: match kind {
+            EnemyKind::Grunt => 'g',
+            EnemyKind::Brute => 'b',
+        },
         size: block_size as f32 * 1.25,
         active: true,
         health,

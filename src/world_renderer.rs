@@ -123,7 +123,12 @@ pub fn render_world(
 
         let pickup_sprite = Sprite {
             pos: pickup.pos,
-            texture: 's',
+            texture: match pickup.kind {
+                PickupKind::Health => 'h',
+                PickupKind::Ammo => 'a',
+                PickupKind::Key => 'k',
+                PickupKind::Switch => 'x',
+            },
             size: block_size as f32 * 0.6,
             active: true,
             health: 0,
@@ -154,7 +159,7 @@ pub fn render_world(
 
         let projectile_sprite = Sprite {
             pos: projectile.pos,
-            texture: 's',
+            texture: 'p',
             size: block_size as f32 * 0.2,
             active: true,
             health: 0,
