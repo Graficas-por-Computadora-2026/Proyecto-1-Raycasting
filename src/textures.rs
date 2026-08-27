@@ -7,15 +7,20 @@ pub struct TextureManager {
 }
 
 impl TextureManager {
-    pub fn new() -> Self {
+    pub fn new(level: usize) -> Self {
         let mut images = HashMap::new();
+        let sphere_path = match level {
+            0 => "assets/sphere1.png",
+            1 => "assets/sphere2.png",
+            _ => "assets/sphere3.png",
+        };
 
         let texture_files = vec![
             ('#', "assets/nivel1.png"),
             ('c', "assets/sky.png"),
             ('h', "assets/hermitaño.png"),
             ('a', "assets/ki.png"),
-            ('x', "assets/sphere1.png"),
+            ('x', sphere_path),
             ('g', "assets/porunga.png"),
             ('e', "assets/frieza.png"),
             ('p', "assets/ki blast.png"),

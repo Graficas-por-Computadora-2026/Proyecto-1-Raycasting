@@ -64,7 +64,6 @@ fn main() {
         normal_render_width * window_height as u32 / window_width as u32,
         Color::BLACK,
     );
-    let textures = TextureManager::new();
     let audio = RaylibAudio::init_audio_device().expect("Failed to initialize audio");
     audio.set_audio_stream_buffer_size_default(65_536);
     let music = audio
@@ -86,15 +85,16 @@ fn main() {
         .new_sound("assets/shenron.mp3")
         .expect("Failed to load shenron sound");
     music.set_volume(2.0);
-    shoot_sound.set_volume(3.0);
-    hit_sound.set_volume(3.0);
-    cure_sound.set_volume(3.0);
-    ki_sound.set_volume(3.0);
-    shenron_sound.set_volume(3.0);
+    shoot_sound.set_volume(5.0);
+    hit_sound.set_volume(5.0);
+    cure_sound.set_volume(5.0);
+    ki_sound.set_volume(5.0);
+    shenron_sound.set_volume(5.0);
     music.play_stream();
 
     let level_files = ["maps/mapa1.txt", "maps/mapa3.txt", "maps/mapa2.txt"];
     let mut selected_level = 0;
+    let mut textures = TextureManager::new(selected_level);
     let mut highest_unlocked_level = 0;
     let mut maze = load_maze(level_files[selected_level]);
 
@@ -146,6 +146,7 @@ fn main() {
 
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
                 maze = load_maze(level_files[selected_level]);
+                textures = TextureManager::new(selected_level);
                 player.pos = player_start_position(&maze, block_size);
                 player.a = player_start_angle(&maze);
                 sprites = spawn_enemies(selected_level, &maze, block_size);
@@ -156,6 +157,10 @@ fn main() {
                 projectiles.clear();
                 shot_flash = 0.0;
                 welcome_screen = false;
+                success_screen = selected_level == level_files.len() - 1;
+                if success_screen {
+                    shenron_sound.play();
+                }
             }
 
             framebuffer.clear();
@@ -191,6 +196,7 @@ fn main() {
         if defeat_screen {
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
                 maze = load_maze(level_files[selected_level]);
+                textures = TextureManager::new(selected_level);
                 player.pos = player_start_position(&maze, block_size);
                 player.a = player_start_angle(&maze);
                 sprites = spawn_enemies(selected_level, &maze, block_size);
@@ -362,7 +368,7 @@ fn main() {
                 window.get_time() as f32,
                 shot_flash > 0.0,
             );
-            render_minimap(&mut framebuffer, &maze, &player, block_size);
+            render_minimap(&mut framebuffer, &maze, &player, &sprites, &pickups, block_size);
             render_hud(
                 &mut framebuffer,
                 player_health,

@@ -1,7 +1,9 @@
 use raylib::prelude::*;
 
+use crate::combat::{Pickup, PickupKind};
 use crate::framebuffer::Framebuffer;
 use crate::player::Player;
+use crate::sprites::Sprite;
 use crate::textures::TextureManager;
 use crate::Maze;
 
@@ -97,6 +99,8 @@ pub fn render_minimap(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
     player: &Player,
+    sprites: &[Sprite],
+    pickups: &[Pickup],
     block_size: usize,
 ) {
     const MARGIN: u32 = 12;
@@ -162,13 +166,75 @@ pub fn render_minimap(
         }
     }
 
-    let player_x = margin_x + (player.pos.x / (block_size as f32 * columns as f32) * width as f32) as u32;
-    let player_y = margin_y + (player.pos.y / (block_size as f32 * rows as f32) * height as f32) as u32;
-    framebuffer.set_current_color(Color::SKYBLUE);
-    for y in player_y.saturating_sub(3)..=player_y + 3 {
-        for x in player_x.saturating_sub(3)..=player_x + 3 {
-            framebuffer.set_pixel(x, y);
+    for sprite in sprites.iter().filter(|sprite| sprite.active) {
+        draw_world_marker(
+            framebuffer,
+            sprite.pos,
+            columns,
+            rows,
+            block_size,
+            margin_x,
+            margin_y,
+            width,
+            height,
+            Color::RED,
+            2,
+        );
+    }
+
+    for pickup in pickups.iter().filter(|pickup| {
+        pickup.active && matches!(pickup.kind, PickupKind::Switch)
+    }) {
+        draw_world_marker(
+            framebuffer,
+            pickup.pos,
+            columns,
+            rows,
+            block_size,
+            margin_x,
+            margin_y,
+            width,
+            height,
+            Color::ORANGE,
+            3,
+        );
+    }
+
+    draw_world_marker(
+        framebuffer,
+        player.pos,
+        columns,
+        rows,
+        block_size,
+        margin_x,
+        margin_y,
+        width,
+        height,
+        Color::SKYBLUE,
+        3,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_world_marker(
+    framebuffer: &mut Framebuffer,
+    position: Vector2,
+    columns: u32,
+    rows: u32,
+    block_size: usize,
+    margin_x: u32,
+    margin_y: u32,
+    width: u32,
+    height: u32,
+    color: Color,
+    radius: u32,
+) {
+    let x = margin_x + (position.x / (block_size as f32 * columns as f32) * width as f32) as u32;
+    let y = margin_y + (position.y / (block_size as f32 * rows as f32) * height as f32) as u32;
+    framebuffer.set_current_color(color);
+    for marker_y in y.saturating_sub(radius)..=y + radius {
+        for marker_x in x.saturating_sub(radius)..=x + radius {
+            framebuffer.set_pixel(marker_x, marker_y);
         }
     }
 }
-

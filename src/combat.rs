@@ -254,8 +254,8 @@ pub fn update_enemies(
         }
 
         let (speed, attack_delay, projectile_speed) = match sprite.kind {
-            EnemyKind::Grunt => (45.0, 1.2, 90.0),
-            EnemyKind::Brute => (50.0, 1.8, 70.0),
+            EnemyKind::Grunt => (45.0, 5.0, 90.0),
+            EnemyKind::Brute => (50.0, 5.0, 70.0),
         };
 
         if sprite.attack_cooldown == 0.0 {

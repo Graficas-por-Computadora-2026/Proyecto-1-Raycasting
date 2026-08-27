@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use std::ffi::CString;
 
 pub struct Framebuffer {
     width: u32,
@@ -7,6 +8,8 @@ pub struct Framebuffer {
     display_texture: Option<Texture2D>,
     yamcha_texture: Option<Texture2D>,
     sphere_texture: Option<Texture2D>,
+    sphere_two_texture: Option<Texture2D>,
+    sphere_three_texture: Option<Texture2D>,
     porunga_texture: Option<Texture2D>,
     background_color: Color,
     current_color: Color,
@@ -35,6 +38,8 @@ impl Framebuffer {
             display_texture: None,
             yamcha_texture: None,
             sphere_texture: None,
+            sphere_two_texture: None,
+            sphere_three_texture: None,
             porunga_texture: None,
             background_color,
             current_color: Color::WHITE,
@@ -84,6 +89,12 @@ impl Framebuffer {
         if self.sphere_texture.is_none() {
             self.sphere_texture = window.load_texture(raylib_thread, "assets/sphere1.png").ok();
         }
+        if self.sphere_two_texture.is_none() {
+            self.sphere_two_texture = window.load_texture(raylib_thread, "assets/sphere2.png").ok();
+        }
+        if self.sphere_three_texture.is_none() {
+            self.sphere_three_texture = window.load_texture(raylib_thread, "assets/sphere3.png").ok();
+        }
         if self.porunga_texture.is_none() {
             self.porunga_texture = window.load_texture(raylib_thread, "assets/porunga.png").ok();
         }
@@ -119,41 +130,57 @@ impl Framebuffer {
 
             if show_welcome {
                 draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(16, 36, 90, 255));
-                let center_x = screen_width / 2;
-                renderer.draw_text("DROOM BALL SUPER", center_x - 240, screen_height / 3 - 20, 52, Color::ORANGE);
-                renderer.draw_text("Selecciona un nivel", center_x - 115, screen_height / 2 - 20, 24, Color::WHITE);
+                draw_centered_text(&mut renderer, "DROOM BALL SUPER", screen_width, screen_height / 3 - 20, 52, Color::ORANGE);
+                draw_centered_text(&mut renderer, "Selecciona un nivel", screen_width, screen_height / 2 - 20, 24, Color::WHITE);
                 let level_one_color = if selected_level == 0 { Color::YELLOW } else { Color::LIGHTGRAY };
                 let level_two_color = if selected_level == 1 { Color::YELLOW } else { Color::LIGHTGRAY };
                 let level_three_color = if selected_level == 2 { Color::YELLOW } else { Color::LIGHTGRAY };
-                renderer.draw_text("Nivel 1", center_x - 50, screen_height / 2 + 25, 22, level_one_color);
-                renderer.draw_text("Nivel 2", center_x - 50, screen_height / 2 + 55, 22, level_two_color);
-                renderer.draw_text("Nivel 3", center_x - 50, screen_height / 2 + 85, 22, level_three_color);
-                renderer.draw_text("W/S y ENTER para comenzar", center_x - 145, screen_height / 2 + 145, 20, Color::WHITE);
-                renderer.draw_text("W/S: mover | A/D o mouse: girar | ESPACIO: disparar | E: usar | M: vista 2D/3D", center_x - 335, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
+                draw_centered_text(&mut renderer, "Nivel 1", screen_width, screen_height / 2 + 25, 22, level_one_color);
+                draw_centered_text(&mut renderer, "Nivel 2", screen_width, screen_height / 2 + 55, 22, level_two_color);
+                draw_centered_text(&mut renderer, "Nivel 3", screen_width, screen_height / 2 + 85, 22, level_three_color);
+                draw_centered_text(&mut renderer, "W/S y ENTER para comenzar", screen_width, screen_height / 2 + 145, 20, Color::WHITE);
+                draw_centered_text(&mut renderer, "W/S: mover | A/D o mouse: girar | ESPACIO: disparar | E: usar | M: vista 2D/3D", screen_width, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
             } else if show_success {
                 draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(12, 66, 42, 255));
                 if selected_level == 2 {
                     if let Some(texture) = self.porunga_texture.as_ref() {
-                        draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.62);
+                        draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.46);
                     }
-                    renderer.draw_text("PORUNGA HA SIDO INVOCADO", screen_width / 2 - 280, 72, 42, Color::GREEN);
-                    renderer.draw_text("HAS REUNIDO LAS ESFERAS DEL DRAGON", screen_width / 2 - 265, screen_height - 112, 26, Color::YELLOW);
-                } else {
+                    draw_centered_text(&mut renderer, "PORUNGA HA SIDO INVOCADO", screen_width, 58, 42, Color::GREEN);
+                    draw_centered_text(&mut renderer, "HAS REUNIDO LAS ESFERAS DEL DRAGON", screen_width, 108, 26, Color::YELLOW);
+                    let sphere_size = (screen_height / 7).min(screen_width / 7) as f32;
+                    let sphere_y = screen_height as f32 - sphere_size - 54.0;
+                    let sphere_x = screen_width as f32 / 2.0 - sphere_size * 1.6;
                     if let Some(texture) = self.sphere_texture.as_ref() {
+                        draw_texture_fit(&mut renderer, texture, sphere_x, sphere_y, sphere_size, sphere_size);
+                    }
+                    if let Some(texture) = self.sphere_two_texture.as_ref() {
+                        draw_texture_fit(&mut renderer, texture, sphere_x + sphere_size * 1.1, sphere_y, sphere_size, sphere_size);
+                    }
+                    if let Some(texture) = self.sphere_three_texture.as_ref() {
+                        draw_texture_fit(&mut renderer, texture, sphere_x + sphere_size * 2.2, sphere_y, sphere_size, sphere_size);
+                    }
+                } else {
+                    let sphere_texture = if selected_level == 0 {
+                        self.sphere_texture.as_ref()
+                    } else {
+                        self.sphere_two_texture.as_ref()
+                    };
+                    if let Some(texture) = sphere_texture {
                         draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.36);
                     }
-                    renderer.draw_text("HAS RECOLECTADO UNA ESFERA", screen_width / 2 - 285, 82, 42, Color::YELLOW);
-                    renderer.draw_text("DEL DRAGON", screen_width / 2 - 100, 128, 32, Color::ORANGE);
+                    draw_centered_text(&mut renderer, "HAS RECOLECTADO UNA ESFERA", screen_width, 82, 42, Color::YELLOW);
+                    draw_centered_text(&mut renderer, "DEL DRAGON", screen_width, 128, 32, Color::ORANGE);
                 }
-                renderer.draw_text("ENTER: elegir nivel", screen_width / 2 - 125, screen_height - 60, 22, Color::WHITE);
+                draw_centered_text(&mut renderer, "ENTER: elegir nivel", screen_width, screen_height - 60, 22, Color::WHITE);
             } else if show_defeat {
                 draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(72, 12, 10, 255));
                 if let Some(texture) = self.yamcha_texture.as_ref() {
                     draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.60);
                 }
-                renderer.draw_text("HAS SIDO ELIMINADO", screen_width / 2 - 245, 62, 48, Color::YELLOW);
-                renderer.draw_text("ENTER: reiniciar nivel", screen_width / 2 - 145, screen_height - 88, 24, Color::WHITE);
-                renderer.draw_text("L: elegir nivel", screen_width / 2 - 90, screen_height - 53, 20, Color::LIGHTGRAY);
+                draw_centered_text(&mut renderer, "HAS SIDO ELIMINADO", screen_width, 62, 48, Color::YELLOW);
+                draw_centered_text(&mut renderer, "ENTER: reiniciar nivel", screen_width, screen_height - 88, 24, Color::WHITE);
+                draw_centered_text(&mut renderer, "L: elegir nivel", screen_width, screen_height - 53, 20, Color::LIGHTGRAY);
             }
 
             renderer.draw_fps(screen_width - 90, screen_height - 30);
@@ -177,6 +204,19 @@ fn draw_dragon_ball_background<D: RaylibDraw>(
     }
 }
 
+fn draw_centered_text<D: RaylibDraw>(
+    renderer: &mut D,
+    text: &str,
+    screen_width: i32,
+    y: i32,
+    font_size: i32,
+    color: Color,
+) {
+    let text = CString::new(text).expect("Text must not contain null bytes");
+    let width = unsafe { raylib::ffi::MeasureText(text.as_ptr(), font_size) };
+    renderer.draw_text(text.to_str().unwrap(), (screen_width - width) / 2, y, font_size, color);
+}
+
 fn draw_centered_texture<D: RaylibDraw>(
     renderer: &mut D,
     texture: &Texture2D,
@@ -184,21 +224,35 @@ fn draw_centered_texture<D: RaylibDraw>(
     screen_height: i32,
     max_size: f32,
 ) {
+    let max_width = screen_width as f32 * max_size;
+    let max_height = screen_height as f32 * max_size;
+    draw_texture_fit(
+        renderer,
+        texture,
+        (screen_width as f32 - max_width) / 2.0,
+        (screen_height as f32 - max_height) / 2.0,
+        max_width,
+        max_height,
+    );
+}
+
+fn draw_texture_fit<D: RaylibDraw>(
+    renderer: &mut D,
+    texture: &Texture2D,
+    x: f32,
+    y: f32,
+    max_width: f32,
+    max_height: f32,
+) {
     let source_width = texture.width() as f32;
     let source_height = texture.height() as f32;
-    let scale = (screen_width as f32 * max_size / source_width)
-        .min(screen_height as f32 * max_size / source_height);
+    let scale = (max_width / source_width).min(max_height / source_height);
     let width = source_width * scale;
     let height = source_height * scale;
     renderer.draw_texture_pro(
         texture,
         Rectangle::new(0.0, 0.0, source_width, source_height),
-        Rectangle::new(
-            (screen_width as f32 - width) / 2.0,
-            (screen_height as f32 - height) / 2.0,
-            width,
-            height,
-        ),
+        Rectangle::new(x + (max_width - width) / 2.0, y + (max_height - height) / 2.0, width, height),
         Vector2::zero(),
         0.0,
         Color::WHITE,
