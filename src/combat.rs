@@ -38,7 +38,8 @@ fn spawn_enemy(position: Vector2, kind: EnemyKind, block_size: usize) -> Sprite 
     Sprite {
         pos: position,
         texture: 's',
-        size: block_size as f32,
+        // Slightly larger than a map cell so enemies remain recognizable at distance.
+        size: block_size as f32 * 1.25,
         active: true,
         health,
         attack_cooldown: 0.0,
@@ -221,7 +222,8 @@ pub fn update_enemies(
     block_size: usize,
     delta_time: f32,
 ) -> usize {
-    const ATTACK_RANGE: f32 = 220.0;
+    const SIGHT_RANGE: f32 = 1_200.0;
+    const ATTACK_RANGE: f32 = 75.0;
     let mut shots_fired = 0;
 
     for sprite in sprites {
@@ -233,6 +235,9 @@ pub fn update_enemies(
         let dx = player.pos.x - sprite.pos.x;
         let dy = player.pos.y - sprite.pos.y;
         let distance = (dx * dx + dy * dy).sqrt();
+        if distance < f32::EPSILON || distance > SIGHT_RANGE {
+            continue;
+        }
         let angle_from_player = (sprite.pos.y - player.pos.y).atan2(sprite.pos.x - player.pos.x);
         let wall = cast_ray(
             framebuffer,
@@ -249,21 +254,11 @@ pub fn update_enemies(
         }
 
         let (speed, attack_delay, projectile_speed) = match sprite.kind {
-            EnemyKind::Grunt => (25.0, 1.2, 90.0),
-            EnemyKind::Brute => (15.0, 1.8, 70.0),
+            EnemyKind::Grunt => (70.0, 1.2, 90.0),
+            EnemyKind::Brute => (50.0, 1.8, 70.0),
         };
 
-        if distance > ATTACK_RANGE {
-            let step = (speed * delta_time).min(distance - ATTACK_RANGE);
-            let next_position = Vector2::new(
-                sprite.pos.x + dx / distance * step,
-                sprite.pos.y + dy / distance * step,
-            );
-
-            if enemy_can_move(next_position, maze, block_size) {
-                sprite.pos = next_position;
-            }
-        } else if sprite.attack_cooldown == 0.0 {
+        if distance <= ATTACK_RANGE && sprite.attack_cooldown == 0.0 {
             sprite.attack_cooldown = attack_delay;
             projectiles.push(Projectile {
                 pos: sprite.pos,
@@ -274,6 +269,20 @@ pub fn update_enemies(
                 active: true,
             });
             shots_fired += 1;
+        }
+
+        // Attacking does not stop pursuit. Leave only one unit of separation
+        // to avoid overshooting and oscillating around the player.
+        if distance > 1.0 {
+            let step = (speed * delta_time).min(distance - 1.0);
+            let next_position = Vector2::new(
+                sprite.pos.x + dx / distance * step,
+                sprite.pos.y + dy / distance * step,
+            );
+
+            if enemy_can_move(next_position, maze, block_size) {
+                sprite.pos = next_position;
+            }
         }
     }
 

@@ -78,7 +78,7 @@ fn main() {
     hit_sound.set_volume(0.85);
     music.play_stream();
 
-    let level_files = ["maps/mapa1.txt", "maps/mapa2.txt", "maps/mapa3.txt"];
+    let level_files = ["maps/mapa1.txt", "maps/mapa3.txt", "maps/mapa2.txt"];
     let mut selected_level = 0;
     let mut maze = load_maze(level_files[selected_level]);
 
