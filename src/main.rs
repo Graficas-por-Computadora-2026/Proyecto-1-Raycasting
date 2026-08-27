@@ -130,7 +130,7 @@ fn render_world(
             .min(framebuffer.height() as f32) as u32;
 
         if let Some((texture_width, texture_height)) = textures.dimensions(intersect.impact) {
-            let hit_offset = if a.cos().abs() > a.sin().abs() {
+            let hit_offset = if intersect.hit_vertical {
                 intersect.hit_y.rem_euclid(block_size as f32)
             } else {
                 intersect.hit_x.rem_euclid(block_size as f32)

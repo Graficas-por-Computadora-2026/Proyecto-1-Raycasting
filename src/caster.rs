@@ -13,6 +13,7 @@ pub struct Intersect {
     pub cell_y: usize,
     pub hit_x: f32,
     pub hit_y: f32,
+    pub hit_vertical: bool,
 }
 
 pub fn cast_ray(
@@ -24,6 +25,7 @@ pub fn cast_ray(
     draw_line: bool,
 ) -> Intersect {
     let mut d = 0.0;
+    let mut previous_i = player.pos.x as usize / block_size;
 
     framebuffer.set_current_color(Color::GREEN);
 
@@ -42,6 +44,7 @@ pub fn cast_ray(
                 cell_y: 0,
                 hit_x: world_x,
                 hit_y: world_y,
+                hit_vertical: false,
             };
         }
 
@@ -59,6 +62,7 @@ pub fn cast_ray(
                 cell_y: j,
                 hit_x: world_x,
                 hit_y: world_y,
+                hit_vertical: i != previous_i,
             };
         }
 
@@ -70,6 +74,7 @@ pub fn cast_ray(
                 cell_y: j,
                 hit_x: world_x,
                 hit_y: world_y,
+                hit_vertical: i != previous_i,
             };
         }
 
@@ -77,6 +82,7 @@ pub fn cast_ray(
             framebuffer.set_pixel(x as u32, y as u32);
         }
 
+        previous_i = i;
         d += 1.0;
     }
 }
