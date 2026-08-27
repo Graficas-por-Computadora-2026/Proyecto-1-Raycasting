@@ -10,7 +10,7 @@ use framebuffer::Framebuffer;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
-use sprites::{render_sprite, Sprite};
+use sprites::{render_sprite, shoot_sprite, Sprite};
 use textures::TextureManager;
 use std::f32::consts::PI;
 use std::fs::File;
@@ -156,6 +156,16 @@ fn render_world(
     for sprite in sprites {
         render_sprite(framebuffer, player, sprite, textures, &z_buffer);
     }
+
+    let center_x = framebuffer.width() / 2;
+    let center_y = framebuffer.height() / 2;
+    framebuffer.set_current_color(Color::WHITE);
+    for offset in 0..=4 {
+        framebuffer.set_pixel(center_x - offset, center_y);
+        framebuffer.set_pixel(center_x + offset, center_y);
+        framebuffer.set_pixel(center_x, center_y - offset);
+        framebuffer.set_pixel(center_x, center_y + offset);
+    }
 }
 
 fn main() {
@@ -184,10 +194,11 @@ fn main() {
         a: 0.0,
         fov: PI / 3.0,
     };
-    let sprites = [Sprite {
+    let mut sprites = [Sprite {
         pos: Vector2::new(300.0, 75.0),
         texture: 's',
         size: block_size as f32,
+        active: true,
     }];
 
     let mut mode_3d = false;
@@ -198,7 +209,22 @@ fn main() {
         framebuffer.clear();
 
         // 2. move the player on user input
-        process_events(&window, &mut player, &maze, block_size);
+        let shot_fired = process_events(&window, &mut player, &maze, block_size);
+
+        if shot_fired {
+            let wall = cast_ray(
+                &mut framebuffer,
+                &maze,
+                &player,
+                player.a,
+                block_size,
+                false,
+            );
+
+            for sprite in &mut sprites {
+                shoot_sprite(&player, sprite, wall.distance);
+            }
+        }
 
         let m_is_down = window.is_key_down(KeyboardKey::KEY_M);
         if m_is_down && !m_was_down {

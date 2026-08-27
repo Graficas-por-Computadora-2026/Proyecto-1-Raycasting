@@ -9,7 +9,7 @@ pub fn process_events(
     player: &mut Player,
     maze: &Maze,
     block_size: usize,
-) {
+) -> bool {
     const MOVE_SPEED: f32 = 2.0;
     const ROTATION_SPEED: f32 = PI / 90.0;
     const MOUSE_SENSITIVITY: f32 = 0.003;
@@ -35,6 +35,8 @@ pub fn process_events(
         // decrease player position in x and y in the direction of view
         move_player(player, -MOVE_SPEED, maze, block_size);
     }
+
+    window.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT)
 }
 
 fn move_player(player: &mut Player, distance: f32, maze: &Maze, block_size: usize) {

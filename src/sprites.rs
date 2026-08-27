@@ -8,6 +8,23 @@ pub struct Sprite {
     pub pos: Vector2,
     pub texture: char,
     pub size: f32,
+    pub active: bool,
+}
+
+pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) {
+    if !sprite.active {
+        return;
+    }
+
+    let dx = sprite.pos.x - player.pos.x;
+    let dy = sprite.pos.y - player.pos.y;
+    let distance = (dx * dx + dy * dy).sqrt();
+    let angle_difference = normalize_angle(dy.atan2(dx) - player.a);
+    let angular_radius = (sprite.size / 2.0 / distance.max(1.0)).atan();
+
+    if angle_difference.abs() <= angular_radius && distance < wall_distance {
+        sprite.active = false;
+    }
 }
 
 pub fn render_sprite(
@@ -17,6 +34,10 @@ pub fn render_sprite(
     textures: &TextureManager,
     z_buffer: &[f32],
 ) {
+    if !sprite.active {
+        return;
+    }
+
     let dx = sprite.pos.x - player.pos.x;
     let dy = sprite.pos.y - player.pos.y;
     let angle_to_sprite = dy.atan2(dx);
