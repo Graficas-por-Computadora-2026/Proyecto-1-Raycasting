@@ -125,8 +125,10 @@ fn render_world(
             (block_size as f32 / distance_to_wall) * distance_to_projection_plane;
 
         // Calculate the position to draw the stake
-        let stake_top = (hh - (stake_height / 2.0)).max(0.0) as u32;
-        let stake_bottom = (hh + (stake_height / 2.0))
+        let projected_top = hh - (stake_height / 2.0);
+        let projected_bottom = hh + (stake_height / 2.0);
+        let stake_top = projected_top.max(0.0) as u32;
+        let stake_bottom = projected_bottom
             .min(framebuffer.height() as f32) as u32;
 
         if let Some((texture_width, texture_height)) = textures.dimensions(intersect.impact) {
@@ -136,11 +138,9 @@ fn render_world(
                 intersect.hit_x.rem_euclid(block_size as f32)
             };
             let tx = (hit_offset / block_size as f32 * texture_width as f32) as u32;
-            let visible_height = (stake_bottom - stake_top).max(1);
-
             // Draw the stake directly in the framebuffer using texture coordinates.
             for y in stake_top..stake_bottom {
-                let ty = ((y - stake_top) as f32 / visible_height as f32
+                let ty = ((y as f32 - projected_top) / stake_height
                     * texture_height as f32) as u32;
                 framebuffer.set_current_color(textures.get_pixel_color(intersect.impact, tx, ty));
                 framebuffer.set_pixel(i, y);

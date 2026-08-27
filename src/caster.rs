@@ -24,65 +24,92 @@ pub fn cast_ray(
     block_size: usize,
     draw_line: bool,
 ) -> Intersect {
-    let mut d = 0.0;
-    let mut previous_i = player.pos.x as usize / block_size;
+    let ray_x = a.cos();
+    let ray_y = a.sin();
+    let block = block_size as f32;
+    let mut cell_x = (player.pos.x / block) as i32;
+    let mut cell_y = (player.pos.y / block) as i32;
+
+    let delta_x = if ray_x.abs() < f32::EPSILON {
+        f32::INFINITY
+    } else {
+        block / ray_x.abs()
+    };
+    let delta_y = if ray_y.abs() < f32::EPSILON {
+        f32::INFINITY
+    } else {
+        block / ray_y.abs()
+    };
+
+    let step_x = if ray_x < 0.0 { -1 } else { 1 };
+    let step_y = if ray_y < 0.0 { -1 } else { 1 };
+    let mut side_x = if ray_x < 0.0 {
+        (player.pos.x - cell_x as f32 * block) / ray_x.abs()
+    } else {
+        ((cell_x + 1) as f32 * block - player.pos.x) / ray_x.abs()
+    };
+    let mut side_y = if ray_y < 0.0 {
+        (player.pos.y - cell_y as f32 * block) / ray_y.abs()
+    } else {
+        ((cell_y + 1) as f32 * block - player.pos.y) / ray_y.abs()
+    };
 
     framebuffer.set_current_color(Color::GREEN);
 
     loop {
-        let cos = d * a.cos();
-        let sin = d * a.sin();
+        let hit_vertical;
+        let distance;
 
-        let world_x = player.pos.x + cos;
-        let world_y = player.pos.y + sin;
+        if side_x < side_y {
+            side_x += delta_x;
+            cell_x += step_x;
+            hit_vertical = true;
+            distance = side_x - delta_x;
+        } else {
+            side_y += delta_y;
+            cell_y += step_y;
+            hit_vertical = false;
+            distance = side_y - delta_y;
+        }
 
-        if world_x < 0.0 || world_y < 0.0 {
+        let hit_x = player.pos.x + distance * ray_x;
+        let hit_y = player.pos.y + distance * ray_y;
+
+        if cell_x < 0
+            || cell_y < 0
+            || cell_y as usize >= maze.len()
+            || cell_x as usize >= maze[cell_y as usize].len()
+        {
             return Intersect {
-                distance: d,
+                distance,
                 impact: '#',
-                cell_x: 0,
-                cell_y: 0,
-                hit_x: world_x,
-                hit_y: world_y,
-                hit_vertical: false,
+                cell_x: cell_x.max(0) as usize,
+                cell_y: cell_y.max(0) as usize,
+                hit_x,
+                hit_y,
+                hit_vertical,
             };
         }
 
-        let x = world_x as usize;
-        let y = world_y as usize;
+        let impact = maze[cell_y as usize][cell_x as usize];
+        if impact != ' ' {
+            if draw_line {
+                for d in 0..distance.ceil() as u32 {
+                    let x = player.pos.x + d as f32 * ray_x;
+                    let y = player.pos.y + d as f32 * ray_y;
+                    framebuffer.set_pixel(x as u32, y as u32);
+                }
+            }
 
-        let i = x / block_size;
-        let j = y / block_size;
-
-        if j >= maze.len() || i >= maze[j].len() {
             return Intersect {
-                distance: d,
-                impact: '#',
-                cell_x: i,
-                cell_y: j,
-                hit_x: world_x,
-                hit_y: world_y,
-                hit_vertical: i != previous_i,
+                distance,
+                impact,
+                cell_x: cell_x as usize,
+                cell_y: cell_y as usize,
+                hit_x,
+                hit_y,
+                hit_vertical,
             };
         }
-
-        if maze[j][i] != ' ' {
-            return Intersect {
-                distance: d,
-                impact: maze[j][i],
-                cell_x: i,
-                cell_y: j,
-                hit_x: world_x,
-                hit_y: world_y,
-                hit_vertical: i != previous_i,
-            };
-        }
-
-        if draw_line {
-            framebuffer.set_pixel(x as u32, y as u32);
-        }
-
-        previous_i = i;
-        d += 1.0;
     }
 }
