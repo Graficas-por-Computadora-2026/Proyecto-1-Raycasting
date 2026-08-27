@@ -69,6 +69,7 @@ impl Framebuffer {
         &self,
         window: &mut RaylibHandle,
         raylib_thread: &RaylibThread,
+        show_welcome: bool,
     ) {
         // we get the "new" data from the new buffer into texture
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
@@ -78,6 +79,21 @@ impl Framebuffer {
 
             // we move the "new" data to the window (current frame)
             renderer.draw_texture(&texture, 0, 0, Color::WHITE);
+
+            if show_welcome {
+                renderer.draw_rectangle(
+                    0,
+                    0,
+                    self.width as i32,
+                    self.height as i32,
+                    Color::new(12, 18, 35, 255),
+                );
+                renderer.draw_text("MUNDO 3D", 270, 180, 52, Color::SKYBLUE);
+                renderer.draw_text("Presiona ENTER para comenzar", 225, 300, 24, Color::WHITE);
+                renderer.draw_text("Flechas o mouse: mover la vista", 245, 370, 18, Color::LIGHTGRAY);
+                renderer.draw_text("Clic izquierdo: disparar", 280, 400, 18, Color::LIGHTGRAY);
+                renderer.draw_text("M: alternar vista 2D y 3D", 260, 430, 18, Color::LIGHTGRAY);
+            }
         }
     }
 }

@@ -265,9 +265,20 @@ fn main() {
 
     let mut mode_3d = false;
     let mut m_was_down = false;
+    let mut welcome_screen = true;
 
     while !window.window_should_close() {
         music.update_stream();
+
+        if welcome_screen {
+            if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                welcome_screen = false;
+            }
+
+            framebuffer.clear();
+            framebuffer.swap_buffers(&mut window, &raylib_thread, welcome_screen);
+            continue;
+        }
 
         // 1. clear framebuffer
         framebuffer.clear();
@@ -337,6 +348,6 @@ fn main() {
             render_minimap(&mut framebuffer, &maze, &player, block_size);
         }
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread);
+        framebuffer.swap_buffers(&mut window, &raylib_thread, false);
     }
 }
