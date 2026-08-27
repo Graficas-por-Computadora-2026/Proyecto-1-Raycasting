@@ -1,6 +1,7 @@
 mod framebuffer;
 mod caster;
 mod player;
+mod sprites;
 mod input;
 mod textures;
 
@@ -9,6 +10,7 @@ use framebuffer::Framebuffer;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
+use sprites::{render_sprite, Sprite};
 use textures::TextureManager;
 use std::f32::consts::PI;
 use std::fs::File;
@@ -80,8 +82,10 @@ fn render_world(
     player: &Player,
     block_size: usize,
     textures: &TextureManager,
+    sprites: &[Sprite],
 ) {
     let num_rays = framebuffer.width();
+    let mut z_buffer = vec![0.0; num_rays as usize];
 
     let hw = framebuffer.width() as f32 / 2.0;   // precalculated half width
     let hh = framebuffer.height() as f32 / 2.0;  // precalculated half height
@@ -121,6 +125,7 @@ fn render_world(
 
         // this ratio doesn't really matter as long as it is a function of distance
         let distance_to_wall = distance_to_wall.max(1.0);
+        z_buffer[i as usize] = distance_to_wall;
         let stake_height =
             (block_size as f32 / distance_to_wall) * distance_to_projection_plane;
 
@@ -146,6 +151,10 @@ fn render_world(
                 framebuffer.set_pixel(i, y);
             }
         }
+    }
+
+    for sprite in sprites {
+        render_sprite(framebuffer, player, sprite, textures, &z_buffer);
     }
 }
 
@@ -174,6 +183,11 @@ fn main() {
         a: 0.0,
         fov: PI / 3.0,
     };
+    let sprites = [Sprite {
+        pos: Vector2::new(300.0, 75.0),
+        texture: 's',
+        size: block_size as f32,
+    }];
 
     let mut mode_3d = false;
     let mut m_was_down = false;
@@ -216,7 +230,14 @@ fn main() {
                 );
             }
         } else {
-            render_world(&mut framebuffer, &maze, &player, block_size, &textures);
+            render_world(
+                &mut framebuffer,
+                &maze,
+                &player,
+                block_size,
+                &textures,
+                &sprites,
+            );
         }
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);

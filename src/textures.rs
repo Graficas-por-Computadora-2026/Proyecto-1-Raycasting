@@ -19,6 +19,7 @@ impl TextureManager {
             ('|', "assets/wall.png"),
             ('g', "assets/wall.png"),
             ('#', "assets/wall.png"), // default/fallback
+            ('s', "assets/sprite.png"),
         ];
 
         for (ch, path) in texture_files {
