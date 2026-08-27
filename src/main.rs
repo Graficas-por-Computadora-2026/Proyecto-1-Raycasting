@@ -28,6 +28,8 @@ pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
 
 pub type Maze = Vec<Vec<char>>;
 
+const BASE_ASPECT_RATIO: f32 = 800.0 / 600.0;
+
 fn draw_cell(
     framebuffer: &mut Framebuffer,
     x_start: u32,
@@ -189,6 +191,15 @@ fn render_world(
 
     let hw = framebuffer.width() as f32 / 2.0;   // precalculated half width
     let hh = framebuffer.height() as f32 / 2.0;  // precalculated half height
+    let vertical_fov = 2.0 * ((player.fov / 2.0).tan() / BASE_ASPECT_RATIO).atan();
+    let render_fov = 2.0
+        * ((framebuffer.width() as f32 / framebuffer.height() as f32) * (vertical_fov / 2.0).tan())
+            .atan();
+    let render_player = Player {
+        pos: player.pos,
+        a: player.a,
+        fov: render_fov,
+    };
 
     let horizon = hh as u32;
 
@@ -208,20 +219,20 @@ fn render_world(
 
     for i in 0..num_rays {
         let current_ray = i as f32 / num_rays as f32; // current ray divided by total rays
-        let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
+        let a = render_player.a - (render_player.fov / 2.0) + (render_player.fov * current_ray);
 
         let intersect = cast_ray(
             framebuffer,
             &maze,
-            player,
+            &render_player,
             a,
             block_size,
             false,
         );
 
         // Calculate the height of the stake
-        let distance_to_wall = intersect.distance * (player.a - a).cos(); // fish-eye correction
-        let distance_to_projection_plane = hw / (player.fov / 2.0).tan(); // distance from the "camera"
+        let distance_to_wall = intersect.distance * (render_player.a - a).cos(); // fish-eye correction
+        let distance_to_projection_plane = hw / (render_player.fov / 2.0).tan(); // distance from the "camera"
 
         // this ratio doesn't really matter as long as it is a function of distance
         let distance_to_wall = distance_to_wall.max(1.0);
@@ -254,7 +265,14 @@ fn render_world(
     }
 
     for sprite in sprites {
-        render_sprite(framebuffer, player, sprite, textures, &z_buffer, time);
+        render_sprite(
+            framebuffer,
+            &render_player,
+            sprite,
+            textures,
+            &z_buffer,
+            time,
+        );
     }
 
     let center_x = framebuffer.width() / 2;
@@ -271,6 +289,7 @@ fn render_world(
 fn main() {
     let window_width = 800;
     let window_height = 600;
+    let render_width = 1024;
     let block_size = 50;
 
     let (mut window, raylib_thread) = raylib::init()
@@ -281,8 +300,8 @@ fn main() {
     window.disable_cursor();
 
     let mut framebuffer = Framebuffer::new(
-        window_width as u32,
-        window_height as u32,
+        render_width,
+        render_width * window_height as u32 / window_width as u32,
         Color::BLACK,
     );
     let textures = TextureManager::new();
@@ -325,8 +344,11 @@ fn main() {
     while !window.window_should_close() {
         let screen_width = window.get_screen_width().max(1) as u32;
         let screen_height = window.get_screen_height().max(1) as u32;
-        if framebuffer.width() != screen_width || framebuffer.height() != screen_height {
-            framebuffer = Framebuffer::new(screen_width, screen_height, Color::BLACK);
+        let render_height = (render_width as f32 * screen_height as f32 / screen_width as f32)
+            .round()
+            .max(1.0) as u32;
+        if framebuffer.width() != render_width || framebuffer.height() != render_height {
+            framebuffer = Framebuffer::new(render_width, render_height, Color::BLACK);
         }
 
         music.update_stream();

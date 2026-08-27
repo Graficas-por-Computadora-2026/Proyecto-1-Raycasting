@@ -81,12 +81,18 @@ impl Framebuffer {
 
             // the window currently has the "old" data (previous frame)
             let mut renderer = window.begin_drawing(raylib_thread);
+            renderer.clear_background(Color::BLACK);
 
             // we move the "new" data to the window (current frame)
             renderer.draw_texture_pro(
                 &texture,
                 Rectangle::new(0.0, 0.0, self.width as f32, self.height as f32),
-                Rectangle::new(0.0, 0.0, screen_width as f32, screen_height as f32),
+                Rectangle::new(
+                    0.0,
+                    0.0,
+                    screen_width as f32,
+                    screen_height as f32,
+                ),
                 Vector2::zero(),
                 0.0,
                 Color::WHITE,
