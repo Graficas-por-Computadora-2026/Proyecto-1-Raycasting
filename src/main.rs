@@ -1,4 +1,5 @@
 mod framebuffer;
+mod hud;
 mod caster;
 mod player;
 mod sprites;
@@ -7,6 +8,7 @@ mod textures;
 
 use caster::cast_ray;
 use framebuffer::Framebuffer;
+use hud::render_hud;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
@@ -709,45 +711,6 @@ fn update_projectiles(
     hits
 }
 
-fn render_status_bar(framebuffer: &mut Framebuffer, y: u32, value: i32, maximum: i32, color: Color) {
-    const WIDTH: u32 = 160;
-    const HEIGHT: u32 = 14;
-    const X: u32 = 18;
-    let filled_width = (value.clamp(0, maximum) as u32 * WIDTH) / maximum as u32;
-
-    framebuffer.set_current_color(Color::DARKGRAY);
-    for y in y..y + HEIGHT {
-        for x in X..X + WIDTH {
-            framebuffer.set_pixel(x, y);
-        }
-    }
-
-    framebuffer.set_current_color(color);
-    for y in y..y + HEIGHT {
-        for x in X..X + filled_width {
-            framebuffer.set_pixel(x, y);
-        }
-    }
-}
-
-fn render_hud(
-    framebuffer: &mut Framebuffer,
-    health: i32,
-    ammo: i32,
-    enemies_alive: usize,
-    total_enemies: usize,
-) {
-    render_status_bar(framebuffer, 18, health, 100, Color::RED);
-    render_status_bar(framebuffer, 38, ammo, MAX_AMMO, Color::YELLOW);
-    render_status_bar(
-        framebuffer,
-        58,
-        enemies_alive as i32,
-        total_enemies.max(1) as i32,
-        Color::SKYBLUE,
-    );
-}
-
 fn render_world(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
@@ -942,6 +905,7 @@ fn main() {
     );
     let textures = TextureManager::new();
     let audio = RaylibAudio::init_audio_device().expect("Failed to initialize audio");
+    audio.set_audio_stream_buffer_size_default(65_536);
     let music = audio
         .new_music("assets/guichin.mp3")
         .expect("Failed to load background music");
@@ -1214,6 +1178,7 @@ fn main() {
                 &mut framebuffer,
                 player_health,
                 ammo,
+                MAX_AMMO,
                 sprites.iter().filter(|sprite| sprite.active).count(),
                 sprites.len(),
             );
