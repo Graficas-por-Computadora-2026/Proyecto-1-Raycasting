@@ -76,6 +76,53 @@ pub fn render_maze(
     }
 }
 
+fn render_minimap(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    block_size: usize,
+) {
+    const SCALE: u32 = 8;
+    const MARGIN: u32 = 12;
+    const BORDER: u32 = 2;
+
+    let width = maze.iter().map(Vec::len).max().unwrap_or(0) as u32 * SCALE;
+    let height = maze.len() as u32 * SCALE;
+
+    framebuffer.set_current_color(Color::BLACK);
+    for y in MARGIN.saturating_sub(BORDER)..MARGIN + height + BORDER {
+        for x in MARGIN.saturating_sub(BORDER)..MARGIN + width + BORDER {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+
+    for (row, cells) in maze.iter().enumerate() {
+        for (column, cell) in cells.iter().enumerate() {
+            let color = match cell {
+                '+' | '-' | '|' => Color::BLUE,
+                'g' => Color::GRAY,
+                _ => Color::DARKGRAY,
+            };
+            framebuffer.set_current_color(color);
+
+            for y in 0..SCALE {
+                for x in 0..SCALE {
+                    framebuffer.set_pixel(MARGIN + column as u32 * SCALE + x, MARGIN + row as u32 * SCALE + y);
+                }
+            }
+        }
+    }
+
+    let player_x = MARGIN + (player.pos.x / block_size as f32 * SCALE as f32) as u32;
+    let player_y = MARGIN + (player.pos.y / block_size as f32 * SCALE as f32) as u32;
+    framebuffer.set_current_color(Color::GREEN);
+    for y in player_y.saturating_sub(1)..=player_y + 1 {
+        for x in player_x.saturating_sub(1)..=player_x + 1 {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+}
+
 fn render_world(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
@@ -186,6 +233,12 @@ fn main() {
         Color::BLACK,
     );
     let textures = TextureManager::new(&mut window, &raylib_thread);
+    let audio = RaylibAudio::init_audio_device().expect("Failed to initialize audio");
+    let music = audio
+        .new_music("assets/guichin.mp3")
+        .expect("Failed to load background music");
+    music.set_volume(0.2);
+    music.play_stream();
 
     let maze = load_maze("maze.txt");
 
@@ -205,6 +258,8 @@ fn main() {
     let mut m_was_down = false;
 
     while !window.window_should_close() {
+        music.update_stream();
+
         // 1. clear framebuffer
         framebuffer.clear();
 
@@ -265,6 +320,7 @@ fn main() {
                 &textures,
                 &sprites,
             );
+            render_minimap(&mut framebuffer, &maze, &player, block_size);
         }
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
