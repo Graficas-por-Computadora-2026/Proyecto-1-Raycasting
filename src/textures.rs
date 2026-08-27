@@ -15,7 +15,8 @@ impl TextureManager {
             ('h', "assets/hermitaño.png"),
             ('a', "assets/ki.png"),
             ('x', "assets/sphere1.png"),
-            ('g', "assets/frieza.png"),
+            ('g', "assets/porunga.png"),
+            ('e', "assets/frieza.png"),
             ('p', "assets/ki blast.png"),
             ('b', "assets/jiren.png"),
         ];
