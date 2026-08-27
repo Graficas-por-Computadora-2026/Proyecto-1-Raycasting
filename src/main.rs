@@ -289,7 +289,7 @@ fn render_world(
 fn main() {
     let window_width = 800;
     let window_height = 600;
-    let render_width = 1280;
+    let fullscreen_render_width = 1600;
     let block_size = 50;
 
     let (mut window, raylib_thread) = raylib::init()
@@ -300,8 +300,8 @@ fn main() {
     window.disable_cursor();
 
     let mut framebuffer = Framebuffer::new(
-        render_width,
-        render_width * window_height as u32 / window_width as u32,
+        window_width as u32,
+        window_height as u32,
         Color::BLACK,
     );
     let textures = TextureManager::new();
@@ -344,6 +344,11 @@ fn main() {
     while !window.window_should_close() {
         let screen_width = window.get_screen_width().max(1) as u32;
         let screen_height = window.get_screen_height().max(1) as u32;
+        let render_width = if screen_width > window_width as u32 {
+            fullscreen_render_width
+        } else {
+            window_width as u32
+        };
         let render_height = (render_width as f32 * screen_height as f32 / screen_width as f32)
             .round()
             .max(1.0) as u32;
