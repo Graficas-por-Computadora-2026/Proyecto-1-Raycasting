@@ -109,6 +109,8 @@ impl Framebuffer {
                 renderer.draw_text("NIVEL COMPLETADO", 180, 230, 48, Color::GREEN);
                 renderer.draw_text("Presiona ENTER para elegir otro nivel", 205, 330, 24, Color::WHITE);
             }
+
+            renderer.draw_fps(self.width as i32 - 90, self.height as i32 - 30);
         }
     }
 }
