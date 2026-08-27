@@ -75,42 +75,52 @@ impl Framebuffer {
     ) {
         // we get the "new" data from the new buffer into texture
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
+            let screen_width = window.get_screen_width();
+            let screen_height = window.get_screen_height();
 
             // the window currently has the "old" data (previous frame)
             let mut renderer = window.begin_drawing(raylib_thread);
 
             // we move the "new" data to the window (current frame)
-            renderer.draw_texture(&texture, 0, 0, Color::WHITE);
+            renderer.draw_texture_pro(
+                &texture,
+                Rectangle::new(0.0, 0.0, self.width as f32, self.height as f32),
+                Rectangle::new(0.0, 0.0, screen_width as f32, screen_height as f32),
+                Vector2::zero(),
+                0.0,
+                Color::WHITE,
+            );
 
             if show_welcome {
                 renderer.draw_rectangle(
                     0,
                     0,
-                    self.width as i32,
-                    self.height as i32,
+                    screen_width,
+                    screen_height,
                     Color::new(12, 18, 35, 255),
                 );
-                renderer.draw_text("MUNDO 3D", 270, 180, 52, Color::SKYBLUE);
-                renderer.draw_text("Selecciona un nivel", 285, 280, 24, Color::WHITE);
+                let center_x = screen_width / 2;
+                renderer.draw_text("MUNDO 3D", center_x - 130, screen_height / 3 - 20, 52, Color::SKYBLUE);
+                renderer.draw_text("Selecciona un nivel", center_x - 115, screen_height / 2 - 20, 24, Color::WHITE);
                 let level_one_color = if selected_level == 0 { Color::SKYBLUE } else { Color::LIGHTGRAY };
                 let level_two_color = if selected_level == 1 { Color::SKYBLUE } else { Color::LIGHTGRAY };
-                renderer.draw_text("Nivel 1", 350, 325, 22, level_one_color);
-                renderer.draw_text("Nivel 2", 350, 355, 22, level_two_color);
-                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", 185, 420, 20, Color::WHITE);
-                renderer.draw_text("Mouse: girar | Clic izquierdo: disparar | M: vista 2D/3D", 135, 455, 16, Color::LIGHTGRAY);
+                renderer.draw_text("Nivel 1", center_x - 50, screen_height / 2 + 25, 22, level_one_color);
+                renderer.draw_text("Nivel 2", center_x - 50, screen_height / 2 + 55, 22, level_two_color);
+                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", center_x - 215, screen_height / 2 + 120, 20, Color::WHITE);
+                renderer.draw_text("Mouse: girar | Clic izquierdo: disparar | M: vista 2D/3D", center_x - 265, screen_height / 2 + 155, 16, Color::LIGHTGRAY);
             } else if show_success {
                 renderer.draw_rectangle(
                     0,
                     0,
-                    self.width as i32,
-                    self.height as i32,
+                    screen_width,
+                    screen_height,
                     Color::new(12, 35, 20, 255),
                 );
-                renderer.draw_text("NIVEL COMPLETADO", 180, 230, 48, Color::GREEN);
-                renderer.draw_text("Presiona ENTER para elegir otro nivel", 205, 330, 24, Color::WHITE);
+                renderer.draw_text("NIVEL COMPLETADO", screen_width / 2 - 220, screen_height / 2 - 50, 48, Color::GREEN);
+                renderer.draw_text("Presiona ENTER para elegir otro nivel", screen_width / 2 - 195, screen_height / 2 + 50, 24, Color::WHITE);
             }
 
-            renderer.draw_fps(self.width as i32 - 90, self.height as i32 - 30);
+            renderer.draw_fps(screen_width - 90, screen_height - 30);
         }
     }
 }

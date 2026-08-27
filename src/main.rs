@@ -30,16 +30,19 @@ pub type Maze = Vec<Vec<char>>;
 
 fn draw_cell(
     framebuffer: &mut Framebuffer,
-    xo: usize,
-    yo: usize,
-    block_size: usize,
+    x_start: u32,
+    y_start: u32,
+    x_end: u32,
+    y_end: u32,
+    row: usize,
+    column: usize,
     cell: char,
 ) {
     // pinten un rectangulo de diferente color segun cada char
 
     let color = match cell {
         '+' | '-' | '|' => {
-            if (xo / block_size + yo / block_size) % 2 == 0 {
+            if (row + column) % 2 == 0 {
                 Color::BLUE
             } else {
                 Color::GREEN
@@ -53,9 +56,9 @@ fn draw_cell(
 
     framebuffer.set_current_color(color);
 
-    for y in yo..yo + block_size {
-        for x in xo..xo + block_size {
-            framebuffer.set_pixel(x as u32, y as u32);
+    for y in y_start..y_end {
+        for x in x_start..x_end {
+            framebuffer.set_pixel(x, y);
         }
     }
 }
@@ -63,16 +66,58 @@ fn draw_cell(
 pub fn render_maze(
     framebuffer: &mut Framebuffer,
     maze: &Vec<Vec<char>>,
-    block_size: usize,
 ) {
+    let columns = maze.iter().map(Vec::len).max().unwrap_or(1) as u32;
+    let rows = maze.len().max(1) as u32;
+
     for (row_index, row) in maze.iter().enumerate() {
         for (col_index, &cell) in row.iter().enumerate() {
-            let xo = col_index * block_size;
-            let yo = row_index * block_size;
+            let x_start = col_index as u32 * framebuffer.width() / columns;
+            let y_start = row_index as u32 * framebuffer.height() / rows;
+            let x_end = (col_index as u32 + 1) * framebuffer.width() / columns;
+            let y_end = (row_index as u32 + 1) * framebuffer.height() / rows;
 
             // llamen a su draw cell
-            draw_cell(framebuffer, xo, yo, block_size, cell);
+            draw_cell(
+                framebuffer,
+                x_start,
+                y_start,
+                x_end,
+                y_end,
+                row_index,
+                col_index,
+                cell,
+            );
         }
+    }
+}
+
+fn world_to_map_position(
+    position: Vector2,
+    framebuffer: &Framebuffer,
+    maze: &Maze,
+    block_size: usize,
+) -> Vector2 {
+    let columns = maze.iter().map(Vec::len).max().unwrap_or(1) as f32;
+    let rows = maze.len().max(1) as f32;
+
+    Vector2::new(
+        position.x / (columns * block_size as f32) * framebuffer.width() as f32,
+        position.y / (rows * block_size as f32) * framebuffer.height() as f32,
+    )
+}
+
+fn draw_map_line(framebuffer: &mut Framebuffer, start: Vector2, end: Vector2) {
+    let dx = end.x - start.x;
+    let dy = end.y - start.y;
+    let steps = dx.abs().max(dy.abs()).ceil() as u32;
+
+    for step in 0..=steps {
+        let progress = step as f32 / steps.max(1) as f32;
+        framebuffer.set_pixel(
+            (start.x + dx * progress) as u32,
+            (start.y + dy * progress) as u32,
+        );
     }
 }
 
@@ -359,9 +404,15 @@ fn main() {
 
         // 3. draw stuff
         if !mode_3d {
-            render_maze(&mut framebuffer, &maze, block_size);
+            render_maze(&mut framebuffer, &maze);
             framebuffer.set_current_color(Color::GREEN);
-            framebuffer.set_pixel(player.pos.x as u32, player.pos.y as u32);
+            let player_position = world_to_map_position(
+                player.pos,
+                &framebuffer,
+                &maze,
+                block_size,
+            );
+            framebuffer.set_pixel(player_position.x as u32, player_position.y as u32);
 
             let num_rays = 5;
 
@@ -369,13 +420,25 @@ fn main() {
                 let current_ray = i as f32 / num_rays as f32;
                 let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
 
-                cast_ray(
+                let intersect = cast_ray(
                     &mut framebuffer,
                     &maze,
                     &player,
                     a,
                     block_size,
-                    true,
+                    false,
+                );
+                framebuffer.set_current_color(Color::GREEN);
+                let impact_position = world_to_map_position(
+                    Vector2::new(intersect.hit_x, intersect.hit_y),
+                    &framebuffer,
+                    &maze,
+                    block_size,
+                );
+                draw_map_line(
+                    &mut framebuffer,
+                    player_position,
+                    impact_position,
                 );
             }
         } else {
