@@ -70,6 +70,7 @@ impl Framebuffer {
         window: &mut RaylibHandle,
         raylib_thread: &RaylibThread,
         show_welcome: bool,
+        selected_level: usize,
     ) {
         // we get the "new" data from the new buffer into texture
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
@@ -89,10 +90,13 @@ impl Framebuffer {
                     Color::new(12, 18, 35, 255),
                 );
                 renderer.draw_text("MUNDO 3D", 270, 180, 52, Color::SKYBLUE);
-                renderer.draw_text("Presiona ENTER para comenzar", 225, 300, 24, Color::WHITE);
-                renderer.draw_text("Flechas o mouse: mover la vista", 245, 370, 18, Color::LIGHTGRAY);
-                renderer.draw_text("Clic izquierdo: disparar", 280, 400, 18, Color::LIGHTGRAY);
-                renderer.draw_text("M: alternar vista 2D y 3D", 260, 430, 18, Color::LIGHTGRAY);
+                renderer.draw_text("Selecciona un nivel", 285, 280, 24, Color::WHITE);
+                let level_one_color = if selected_level == 0 { Color::SKYBLUE } else { Color::LIGHTGRAY };
+                let level_two_color = if selected_level == 1 { Color::SKYBLUE } else { Color::LIGHTGRAY };
+                renderer.draw_text("Nivel 1", 350, 325, 22, level_one_color);
+                renderer.draw_text("Nivel 2", 350, 355, 22, level_two_color);
+                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", 185, 420, 20, Color::WHITE);
+                renderer.draw_text("Mouse: girar | Clic izquierdo: disparar | M: vista 2D/3D", 135, 455, 16, Color::LIGHTGRAY);
             }
         }
     }

@@ -249,7 +249,9 @@ fn main() {
     hit_sound.set_volume(0.85);
     music.play_stream();
 
-    let maze = load_maze("maze.txt");
+    let level_files = ["maze.txt", "maze_level_2.txt"];
+    let mut selected_level = 0;
+    let mut maze = load_maze(level_files[selected_level]);
 
     let mut player = Player {
         pos: Vector2::new(75.0, 75.0),
@@ -271,12 +273,28 @@ fn main() {
         music.update_stream();
 
         if welcome_screen {
+            if window.is_key_pressed(KeyboardKey::KEY_UP) {
+                selected_level = selected_level.saturating_sub(1);
+            }
+            if window.is_key_pressed(KeyboardKey::KEY_DOWN) {
+                selected_level = (selected_level + 1).min(level_files.len() - 1);
+            }
+
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                maze = load_maze(level_files[selected_level]);
+                player.pos = Vector2::new(75.0, 75.0);
+                player.a = 0.0;
+                sprites[0].active = true;
                 welcome_screen = false;
             }
 
             framebuffer.clear();
-            framebuffer.swap_buffers(&mut window, &raylib_thread, welcome_screen);
+            framebuffer.swap_buffers(
+                &mut window,
+                &raylib_thread,
+                welcome_screen,
+                selected_level,
+            );
             continue;
         }
 
@@ -348,6 +366,6 @@ fn main() {
             render_minimap(&mut framebuffer, &maze, &player, block_size);
         }
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread, false);
+        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level);
     }
 }
