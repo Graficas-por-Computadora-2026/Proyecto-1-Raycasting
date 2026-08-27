@@ -27,18 +27,24 @@ pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
         .collect();
 
     if filename.starts_with("maps/") {
-        let width = source.iter().map(Vec::len).max().unwrap_or(1);
-        let mut maze: Maze = source
-            .into_iter()
-            .map(|row| {
-                let mut cells: Vec<char> = row
-                    .into_iter()
-                    .map(|cell| if cell == '\u{2800}' || cell.is_whitespace() { '+' } else { ' ' })
-                    .collect();
-                cells.resize(width, '+');
-                cells
-            })
-            .collect();
+        let width = source.iter().map(Vec::len).max().unwrap_or(1) * 2;
+        let mut maze = Vec::new();
+
+        for row in source {
+            let mut dot_rows = vec![vec!['+'; width]; 4];
+            for (column, cell) in row.into_iter().enumerate() {
+                let dots = (cell as u32).saturating_sub(0x2800);
+                for (bit, x, y) in [
+                    (0, 0, 0), (1, 0, 1), (2, 0, 2), (6, 0, 3),
+                    (3, 1, 0), (4, 1, 1), (5, 1, 2), (7, 1, 3),
+                ] {
+                    if dots & (1 << bit) != 0 {
+                        dot_rows[y][column * 2 + x] = ' ';
+                    }
+                }
+            }
+            maze.extend(dot_rows);
+        }
         mark_art_start_and_goal(&mut maze);
         maze
     } else {
@@ -158,35 +164,29 @@ struct Projectile {
 
 fn draw_cell(
     framebuffer: &mut Framebuffer,
+    textures: &TextureManager,
     x_start: u32,
     y_start: u32,
     x_end: u32,
     y_end: u32,
-    row: usize,
-    column: usize,
     cell: char,
 ) {
-    // pinten un rectangulo de diferente color segun cada char
-
     let color = match cell {
-        '+' | '-' | '|' => {
-            if (row + column) % 2 == 0 {
-                Color::BLUE
-            } else {
-                Color::GREEN
-            }
-        }
         ' ' => Color::BLACK,
-        'p' => Color::WHITE,
-        'g' => Color::GRAY,
-        'D' => Color::ORANGE,
-        _ => Color::SKYBLUE,
+        'p' => Color::MAGENTA,
+        'g' => Color::RED,
+        _ => Color::WHITE,
     };
-
-    framebuffer.set_current_color(color);
 
     for y in y_start..y_end {
         for x in x_start..x_end {
+            if matches!(cell, ' ' | 'p' | 'g') {
+                framebuffer.set_current_color(color);
+            } else if let Some((texture_width, texture_height)) = textures.dimensions(cell) {
+                let tx = ((x - x_start) * texture_width / (x_end - x_start).max(1)) as u32;
+                let ty = ((y - y_start) * texture_height / (y_end - y_start).max(1)) as u32;
+                framebuffer.set_current_color(textures.get_pixel_color(cell, tx, ty));
+            }
             framebuffer.set_pixel(x, y);
         }
     }
@@ -195,6 +195,7 @@ fn draw_cell(
 pub fn render_maze(
     framebuffer: &mut Framebuffer,
     maze: &Vec<Vec<char>>,
+    textures: &TextureManager,
 ) {
     let columns = maze.iter().map(Vec::len).max().unwrap_or(1) as u32;
     let rows = maze.len().max(1) as u32;
@@ -209,12 +210,11 @@ pub fn render_maze(
             // llamen a su draw cell
             draw_cell(
                 framebuffer,
+                textures,
                 x_start,
                 y_start,
                 x_end,
                 y_end,
-                row_index,
-                col_index,
                 cell,
             );
         }
@@ -261,13 +261,20 @@ fn render_minimap(
 
     let columns = maze.iter().map(Vec::len).max().unwrap_or(1) as u32;
     let rows = maze.len().max(1) as u32;
-    let scale = (160 / columns.max(rows)).clamp(1, 8);
-    let width = columns * scale;
-    let height = rows * scale;
+    let max_width = framebuffer.width() / 4;
+    let max_height = framebuffer.height() / 4;
+    let target_height = (rows * max_width + columns - 1) / columns;
+    let (width, height) = if target_height > max_height {
+        (max_height * columns / rows, max_height)
+    } else {
+        (max_width, target_height)
+    };
+    let margin_x = framebuffer.width().saturating_sub(width + MARGIN);
+    let margin_y = MARGIN;
 
-    framebuffer.set_current_color(Color::BLACK);
-    for y in MARGIN.saturating_sub(BORDER)..MARGIN + height + BORDER {
-        for x in MARGIN.saturating_sub(BORDER)..MARGIN + width + BORDER {
+    framebuffer.set_current_color(Color::WHITE);
+    for y in margin_y.saturating_sub(BORDER)..margin_y + height + BORDER {
+        for x in margin_x.saturating_sub(BORDER)..margin_x + width + BORDER {
             framebuffer.set_pixel(x, y);
         }
     }
@@ -275,26 +282,48 @@ fn render_minimap(
     for (row, cells) in maze.iter().enumerate() {
         for (column, cell) in cells.iter().enumerate() {
             let color = match cell {
-                '+' | '-' | '|' => Color::BLUE,
-                'g' => Color::GRAY,
-                'D' => Color::ORANGE,
-                _ => Color::DARKGRAY,
+                '+' | '-' | '|' | 'D' => Color::BLACK,
+                'g' => Color::RED,
+                'p' => Color::MAGENTA,
+                _ => Color::WHITE,
             };
             framebuffer.set_current_color(color);
 
-            for y in 0..scale {
-                for x in 0..scale {
-                    framebuffer.set_pixel(MARGIN + column as u32 * scale + x, MARGIN + row as u32 * scale + y);
+            let x_start = margin_x + column as u32 * width / columns;
+            let x_end = margin_x + (column as u32 + 1) * width / columns;
+            let y_start = margin_y + row as u32 * height / rows;
+            let y_end = margin_y + (row as u32 + 1) * height / rows;
+            for y in y_start..y_end {
+                for x in x_start..x_end {
+                    framebuffer.set_pixel(x, y);
                 }
             }
         }
     }
 
-    let player_x = MARGIN + (player.pos.x / block_size as f32 * scale as f32) as u32;
-    let player_y = MARGIN + (player.pos.y / block_size as f32 * scale as f32) as u32;
-    framebuffer.set_current_color(Color::GREEN);
-    for y in player_y.saturating_sub(1)..=player_y + 1 {
-        for x in player_x.saturating_sub(1)..=player_x + 1 {
+    for (marker, color) in [('p', Color::MAGENTA), ('g', Color::RED)] {
+        if let Some((row, column)) = maze.iter().enumerate().find_map(|(row, cells)| {
+            cells
+                .iter()
+                .position(|cell| *cell == marker)
+                .map(|column| (row, column))
+        }) {
+            let marker_x = margin_x + (column as u32 * width / columns);
+            let marker_y = margin_y + (row as u32 * height / rows);
+            framebuffer.set_current_color(color);
+            for y in marker_y.saturating_sub(2)..=marker_y + 2 {
+                for x in marker_x.saturating_sub(2)..=marker_x + 2 {
+                    framebuffer.set_pixel(x, y);
+                }
+            }
+        }
+    }
+
+    let player_x = margin_x + (player.pos.x / (block_size as f32 * columns as f32) * width as f32) as u32;
+    let player_y = margin_y + (player.pos.y / (block_size as f32 * rows as f32) * height as f32) as u32;
+    framebuffer.set_current_color(Color::SKYBLUE);
+    for y in player_y.saturating_sub(3)..=player_y + 3 {
+        for x in player_x.saturating_sub(3)..=player_x + 3 {
             framebuffer.set_pixel(x, y);
         }
     }
@@ -328,6 +357,27 @@ fn player_start_position(maze: &Maze, block_size: usize) -> Vector2 {
     }
 
     Vector2::new(75.0, 75.0)
+}
+
+fn player_start_angle(maze: &Maze) -> f32 {
+    for (row, cells) in maze.iter().enumerate() {
+        if let Some(column) = cells.iter().position(|cell| *cell == 'p') {
+            for (dx, dy) in [(1isize, 0isize), (-1, 0), (0, 1), (0, -1)] {
+                let next_x = column as isize + dx;
+                let next_y = row as isize + dy;
+                if next_y >= 0
+                    && (next_y as usize) < maze.len()
+                    && next_x >= 0
+                    && (next_x as usize) < maze[next_y as usize].len()
+                    && is_walkable_cell(maze[next_y as usize][next_x as usize])
+                {
+                    return (dy as f32).atan2(dx as f32);
+                }
+            }
+        }
+    }
+
+    0.0
 }
 
 fn reachable_cells(maze: &Maze) -> Vec<(usize, usize)> {
@@ -872,10 +922,11 @@ fn render_world(
 }
 
 fn main() {
-    let window_width = 800;
-    let window_height = 600;
+    let window_width = 1200;
+    let window_height = 900;
+    let normal_render_width = 1000;
     let fullscreen_render_width = 1600;
-    let block_size = 50;
+    let block_size = 15;
 
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
@@ -885,8 +936,8 @@ fn main() {
     window.disable_cursor();
 
     let mut framebuffer = Framebuffer::new(
-        window_width as u32,
-        window_height as u32,
+        normal_render_width,
+        normal_render_width * window_height as u32 / window_width as u32,
         Color::BLACK,
     );
     let textures = TextureManager::new();
@@ -905,13 +956,13 @@ fn main() {
     hit_sound.set_volume(0.85);
     music.play_stream();
 
-    let level_files = ["maps/mapa1.txt", "maps/mapa2.txt"];
+    let level_files = ["maps/mapa1.txt", "maps/mapa2.txt", "maps/mapa3.txt"];
     let mut selected_level = 0;
     let mut maze = load_maze(level_files[selected_level]);
 
     let mut player = Player {
         pos: player_start_position(&maze, block_size),
-        a: 0.0,
+        a: player_start_angle(&maze),
         fov: PI / 3.0,
     };
     let mut sprites = spawn_enemies(selected_level, &maze, block_size);
@@ -932,10 +983,12 @@ fn main() {
     while !window.window_should_close() {
         let screen_width = window.get_screen_width().max(1) as u32;
         let screen_height = window.get_screen_height().max(1) as u32;
-        let render_width = if window.is_window_fullscreen() {
+        let render_width = if window.is_window_fullscreen()
+            || (screen_width >= 1800 && screen_height >= 1000)
+        {
             fullscreen_render_width
         } else {
-            window_width as u32
+            normal_render_width
         };
         let render_height = (render_width as f32 * screen_height as f32 / screen_width as f32)
             .round()
@@ -957,7 +1010,7 @@ fn main() {
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
                 maze = load_maze(level_files[selected_level]);
                 player.pos = player_start_position(&maze, block_size);
-                player.a = 0.0;
+                player.a = player_start_angle(&maze);
                 sprites = spawn_enemies(selected_level, &maze, block_size);
                 pickups = spawn_pickups(selected_level, &maze, block_size);
                 player_health = 100;
@@ -996,7 +1049,7 @@ fn main() {
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
                 maze = load_maze(level_files[selected_level]);
                 player.pos = player_start_position(&maze, block_size);
-                player.a = 0.0;
+                player.a = player_start_angle(&maze);
                 sprites = spawn_enemies(selected_level, &maze, block_size);
                 pickups = spawn_pickups(selected_level, &maze, block_size);
                 player_health = 100;
@@ -1106,8 +1159,8 @@ fn main() {
 
         // 3. draw stuff
         if !mode_3d {
-            render_maze(&mut framebuffer, &maze);
-            framebuffer.set_current_color(Color::GREEN);
+            render_maze(&mut framebuffer, &maze, &textures);
+            framebuffer.set_current_color(Color::SKYBLUE);
             let player_position = world_to_map_position(
                 player.pos,
                 &framebuffer,

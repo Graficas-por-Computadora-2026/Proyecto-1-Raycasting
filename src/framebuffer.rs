@@ -126,10 +126,12 @@ impl Framebuffer {
                 renderer.draw_text("Selecciona un nivel", center_x - 115, screen_height / 2 - 20, 24, Color::WHITE);
                 let level_one_color = if selected_level == 0 { Color::SKYBLUE } else { Color::LIGHTGRAY };
                 let level_two_color = if selected_level == 1 { Color::SKYBLUE } else { Color::LIGHTGRAY };
+                let level_three_color = if selected_level == 2 { Color::SKYBLUE } else { Color::LIGHTGRAY };
                 renderer.draw_text("Nivel 1", center_x - 50, screen_height / 2 + 25, 22, level_one_color);
                 renderer.draw_text("Nivel 2", center_x - 50, screen_height / 2 + 55, 22, level_two_color);
-                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", center_x - 215, screen_height / 2 + 120, 20, Color::WHITE);
-                renderer.draw_text("Mouse: girar | Clic: disparar | E: usar | M: vista 2D/3D", center_x - 245, screen_height / 2 + 155, 16, Color::LIGHTGRAY);
+                renderer.draw_text("Nivel 3", center_x - 50, screen_height / 2 + 85, 22, level_three_color);
+                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", center_x - 215, screen_height / 2 + 145, 20, Color::WHITE);
+                renderer.draw_text("Mouse: girar | Clic: disparar | E: usar | M: vista 2D/3D", center_x - 245, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
             } else if show_success {
                 renderer.draw_rectangle(
                     0,
