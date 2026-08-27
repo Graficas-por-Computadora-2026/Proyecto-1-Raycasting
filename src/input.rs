@@ -52,7 +52,7 @@ fn move_player(player: &mut Player, distance: f32, maze: &Maze, block_size: usiz
 
     if row < maze.len()
         && column < maze[row].len()
-        && matches!(maze[row][column], ' ' | 'g')
+        && matches!(maze[row][column], ' ' | 'p' | 'g')
     {
         player.pos.x = next_x;
         player.pos.y = next_y;

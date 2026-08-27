@@ -10,25 +10,151 @@ use framebuffer::Framebuffer;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
-use sprites::{render_sprite, shoot_sprite, Sprite};
+use sprites::{render_sprite, shoot_sprite, EnemyKind, Sprite};
 use textures::TextureManager;
 use std::f32::consts::PI;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::collections::VecDeque;
 
 pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
 
-    reader
+    let source: Vec<Vec<char>> = reader
         .lines()
         .map(|line| line.unwrap().chars().collect())
-        .collect()
+        .collect();
+
+    if filename.starts_with("maps/") {
+        let width = source.iter().map(Vec::len).max().unwrap_or(1);
+        let mut maze: Maze = source
+            .into_iter()
+            .map(|row| {
+                let mut cells: Vec<char> = row
+                    .into_iter()
+                    .map(|cell| if cell == '\u{2800}' || cell.is_whitespace() { '+' } else { ' ' })
+                    .collect();
+                cells.resize(width, '+');
+                cells
+            })
+            .collect();
+        mark_art_start_and_goal(&mut maze);
+        maze
+    } else {
+        source
+    }
 }
 
 pub type Maze = Vec<Vec<char>>;
 
+fn is_walkable_cell(cell: char) -> bool {
+    matches!(cell, ' ' | 'p' | 'g')
+}
+
+fn farthest_cell(maze: &Maze, start: (usize, usize)) -> (usize, usize) {
+    let mut distances = vec![vec![None; maze[0].len()]; maze.len()];
+    let mut queue = VecDeque::from([start]);
+    distances[start.1][start.0] = Some(0usize);
+    let mut farthest = start;
+
+    while let Some((x, y)) = queue.pop_front() {
+        let distance = distances[y][x].unwrap();
+        if distance > distances[farthest.1][farthest.0].unwrap() {
+            farthest = (x, y);
+        }
+
+        for (dx, dy) in [(1isize, 0isize), (-1, 0), (0, 1), (0, -1)] {
+            let next_x = x as isize + dx;
+            let next_y = y as isize + dy;
+            if next_y < 0
+                || next_y as usize >= maze.len()
+                || next_x < 0
+                || next_x as usize >= maze[next_y as usize].len()
+            {
+                continue;
+            }
+
+            let (next_x, next_y) = (next_x as usize, next_y as usize);
+            if distances[next_y][next_x].is_none() && is_walkable_cell(maze[next_y][next_x]) {
+                distances[next_y][next_x] = Some(distance + 1);
+                queue.push_back((next_x, next_y));
+            }
+        }
+    }
+
+    farthest
+}
+
+fn mark_art_start_and_goal(maze: &mut Maze) {
+    let mut visited = vec![vec![false; maze[0].len()]; maze.len()];
+    let mut largest_component = Vec::new();
+
+    for y in 0..maze.len() {
+        for x in 0..maze[y].len() {
+            if visited[y][x] || !is_walkable_cell(maze[y][x]) {
+                continue;
+            }
+
+            let mut component = Vec::new();
+            let mut queue = VecDeque::from([(x, y)]);
+            visited[y][x] = true;
+            while let Some((cell_x, cell_y)) = queue.pop_front() {
+                component.push((cell_x, cell_y));
+                for (dx, dy) in [(1isize, 0isize), (-1, 0), (0, 1), (0, -1)] {
+                    let next_x = cell_x as isize + dx;
+                    let next_y = cell_y as isize + dy;
+                    if next_y < 0
+                        || next_y as usize >= maze.len()
+                        || next_x < 0
+                        || next_x as usize >= maze[next_y as usize].len()
+                    {
+                        continue;
+                    }
+                    let (next_x, next_y) = (next_x as usize, next_y as usize);
+                    if !visited[next_y][next_x] && is_walkable_cell(maze[next_y][next_x]) {
+                        visited[next_y][next_x] = true;
+                        queue.push_back((next_x, next_y));
+                    }
+                }
+            }
+
+            if component.len() > largest_component.len() {
+                largest_component = component;
+            }
+        }
+    }
+
+    if let Some(&cell) = largest_component.first() {
+        let start = farthest_cell(maze, cell);
+        let goal = farthest_cell(maze, start);
+        maze[start.1][start.0] = 'p';
+        maze[goal.1][goal.0] = 'g';
+    }
+}
+
 const BASE_ASPECT_RATIO: f32 = 800.0 / 600.0;
+const MAX_AMMO: i32 = 12;
+
+#[derive(Clone, Copy)]
+enum PickupKind {
+    Health,
+    Ammo,
+    Key,
+    Switch,
+}
+
+struct Pickup {
+    pos: Vector2,
+    kind: PickupKind,
+    active: bool,
+}
+
+struct Projectile {
+    pos: Vector2,
+    direction: Vector2,
+    active: bool,
+}
 
 fn draw_cell(
     framebuffer: &mut Framebuffer,
@@ -53,6 +179,7 @@ fn draw_cell(
         ' ' => Color::BLACK,
         'p' => Color::WHITE,
         'g' => Color::GRAY,
+        'D' => Color::ORANGE,
         _ => Color::SKYBLUE,
     };
 
@@ -129,12 +256,14 @@ fn render_minimap(
     player: &Player,
     block_size: usize,
 ) {
-    const SCALE: u32 = 8;
     const MARGIN: u32 = 12;
     const BORDER: u32 = 2;
 
-    let width = maze.iter().map(Vec::len).max().unwrap_or(0) as u32 * SCALE;
-    let height = maze.len() as u32 * SCALE;
+    let columns = maze.iter().map(Vec::len).max().unwrap_or(1) as u32;
+    let rows = maze.len().max(1) as u32;
+    let scale = (160 / columns.max(rows)).clamp(1, 8);
+    let width = columns * scale;
+    let height = rows * scale;
 
     framebuffer.set_current_color(Color::BLACK);
     for y in MARGIN.saturating_sub(BORDER)..MARGIN + height + BORDER {
@@ -148,20 +277,21 @@ fn render_minimap(
             let color = match cell {
                 '+' | '-' | '|' => Color::BLUE,
                 'g' => Color::GRAY,
+                'D' => Color::ORANGE,
                 _ => Color::DARKGRAY,
             };
             framebuffer.set_current_color(color);
 
-            for y in 0..SCALE {
-                for x in 0..SCALE {
-                    framebuffer.set_pixel(MARGIN + column as u32 * SCALE + x, MARGIN + row as u32 * SCALE + y);
+            for y in 0..scale {
+                for x in 0..scale {
+                    framebuffer.set_pixel(MARGIN + column as u32 * scale + x, MARGIN + row as u32 * scale + y);
                 }
             }
         }
     }
 
-    let player_x = MARGIN + (player.pos.x / block_size as f32 * SCALE as f32) as u32;
-    let player_y = MARGIN + (player.pos.y / block_size as f32 * SCALE as f32) as u32;
+    let player_x = MARGIN + (player.pos.x / block_size as f32 * scale as f32) as u32;
+    let player_y = MARGIN + (player.pos.y / block_size as f32 * scale as f32) as u32;
     framebuffer.set_current_color(Color::GREEN);
     for y in player_y.saturating_sub(1)..=player_y + 1 {
         for x in player_x.saturating_sub(1)..=player_x + 1 {
@@ -170,22 +300,250 @@ fn render_minimap(
     }
 }
 
-fn player_reached_goal(player: &Player, maze: &Maze, block_size: usize) -> bool {
+fn player_reached_goal(
+    player: &Player,
+    maze: &Maze,
+    sprites: &[Sprite],
+    exit_unlocked: bool,
+    block_size: usize,
+) -> bool {
     let column = player.pos.x as usize / block_size;
     let row = player.pos.y as usize / block_size;
 
-    row < maze.len() && column < maze[row].len() && maze[row][column] == 'g'
+    row < maze.len()
+        && column < maze[row].len()
+        && maze[row][column] == 'g'
+        && sprites.iter().all(|sprite| !sprite.active)
+        && exit_unlocked
 }
 
-fn spawn_enemy(block_size: usize) -> Sprite {
+fn player_start_position(maze: &Maze, block_size: usize) -> Vector2 {
+    for (row, cells) in maze.iter().enumerate() {
+        if let Some(column) = cells.iter().position(|cell| *cell == 'p') {
+            return Vector2::new(
+                (column as f32 + 0.5) * block_size as f32,
+                (row as f32 + 0.5) * block_size as f32,
+            );
+        }
+    }
+
+    Vector2::new(75.0, 75.0)
+}
+
+fn reachable_cells(maze: &Maze) -> Vec<(usize, usize)> {
+    let Some((start_x, start_y)) = maze.iter().enumerate().find_map(|(row, cells)| {
+        cells
+            .iter()
+            .position(|cell| *cell == 'p')
+            .map(|column| (column, row))
+    }) else {
+        return Vec::new();
+    };
+
+    let mut cells = Vec::new();
+    let mut visited = vec![vec![false; maze[0].len()]; maze.len()];
+    let mut queue = VecDeque::from([(start_x, start_y)]);
+    visited[start_y][start_x] = true;
+
+    while let Some((x, y)) = queue.pop_front() {
+        cells.push((x, y));
+        for (dx, dy) in [(1isize, 0isize), (-1, 0), (0, 1), (0, -1)] {
+            let next_x = x as isize + dx;
+            let next_y = y as isize + dy;
+            if next_y < 0
+                || next_y as usize >= maze.len()
+                || next_x < 0
+                || next_x as usize >= maze[next_y as usize].len()
+            {
+                continue;
+            }
+            let (next_x, next_y) = (next_x as usize, next_y as usize);
+            if !visited[next_y][next_x] && is_walkable_cell(maze[next_y][next_x]) {
+                visited[next_y][next_x] = true;
+                queue.push_back((next_x, next_y));
+            }
+        }
+    }
+
+    cells
+}
+
+fn cell_position(cell: (usize, usize), block_size: usize) -> Vector2 {
+    Vector2::new(
+        (cell.0 as f32 + 0.5) * block_size as f32,
+        (cell.1 as f32 + 0.5) * block_size as f32,
+    )
+}
+
+fn spawn_enemy(position: Vector2, kind: EnemyKind, block_size: usize) -> Sprite {
+    let health = match kind {
+        EnemyKind::Grunt => 3,
+        EnemyKind::Brute => 5,
+    };
+
     Sprite {
-        pos: Vector2::new(300.0, 75.0),
+        pos: position,
         texture: 's',
         size: block_size as f32,
         active: true,
-        health: 3,
+        health,
         attack_cooldown: 0.0,
+        kind,
     }
+}
+
+fn spawn_enemies(level: usize, maze: &Maze, block_size: usize) -> Vec<Sprite> {
+    let cells = reachable_cells(maze);
+    if !cells.is_empty() {
+        let enemy_cells = [cells[cells.len() / 3], cells[cells.len() * 2 / 3]];
+        return enemy_cells
+            .into_iter()
+            .enumerate()
+            .map(|(index, cell)| {
+                let kind = if index == 0 {
+                    EnemyKind::Grunt
+                } else {
+                    EnemyKind::Brute
+                };
+                spawn_enemy(cell_position(cell, block_size), kind, block_size)
+            })
+            .collect();
+    }
+
+    let positions = match level {
+        0 => vec![
+            (Vector2::new(300.0, 75.0), EnemyKind::Grunt),
+            (Vector2::new(500.0, 75.0), EnemyKind::Brute),
+        ],
+        1 => vec![
+            (Vector2::new(250.0, 75.0), EnemyKind::Grunt),
+            (Vector2::new(425.0, 75.0), EnemyKind::Grunt),
+            (Vector2::new(550.0, 75.0), EnemyKind::Brute),
+        ],
+        _ => Vec::new(),
+    };
+
+    positions
+        .into_iter()
+        .map(|(position, kind)| spawn_enemy(position, kind, block_size))
+        .collect()
+}
+
+fn spawn_pickups(level: usize, maze: &Maze, block_size: usize) -> Vec<Pickup> {
+    let cells = reachable_cells(maze);
+    if !cells.is_empty() {
+        let pickups = [
+            (cells[cells.len() / 6], PickupKind::Ammo),
+            (cells[cells.len() / 2], PickupKind::Health),
+            (cells[cells.len() * 4 / 5], PickupKind::Switch),
+        ];
+        return pickups
+            .into_iter()
+            .map(|(cell, kind)| Pickup {
+                pos: cell_position(cell, block_size),
+                kind,
+                active: true,
+            })
+            .collect();
+    }
+
+    let items = match level {
+        0 => vec![
+            (Vector2::new(125.0, 75.0), PickupKind::Key),
+            (Vector2::new(175.0, 75.0), PickupKind::Ammo),
+            (Vector2::new(350.0, 75.0), PickupKind::Health),
+            (Vector2::new(425.0, 75.0), PickupKind::Switch),
+        ],
+        1 => vec![
+            (Vector2::new(125.0, 75.0), PickupKind::Key),
+            (Vector2::new(150.0, 75.0), PickupKind::Health),
+            (Vector2::new(350.0, 75.0), PickupKind::Ammo),
+            (Vector2::new(500.0, 75.0), PickupKind::Ammo),
+            (Vector2::new(450.0, 75.0), PickupKind::Switch),
+        ],
+        _ => Vec::new(),
+    };
+
+    items
+        .into_iter()
+        .map(|(pos, kind)| Pickup {
+            pos,
+            kind,
+            active: true,
+        })
+        .collect()
+}
+
+fn collect_pickups(
+    player: &Player,
+    pickups: &mut [Pickup],
+    health: &mut i32,
+    ammo: &mut i32,
+    has_key: &mut bool,
+) -> bool {
+    const PICKUP_DISTANCE: f32 = 28.0;
+    let mut collected = false;
+
+    for pickup in pickups {
+        if !pickup.active || player.pos.distance_to(pickup.pos) > PICKUP_DISTANCE {
+            continue;
+        }
+
+        match pickup.kind {
+            PickupKind::Health => *health = (*health + 25).min(100),
+            PickupKind::Ammo => *ammo = (*ammo + 6).min(MAX_AMMO),
+            PickupKind::Key => *has_key = true,
+            PickupKind::Switch => continue,
+        }
+        pickup.active = false;
+        collected = true;
+    }
+
+    collected
+}
+
+fn interact_with_level(
+    player: &Player,
+    maze: &mut Maze,
+    pickups: &mut [Pickup],
+    has_key: &mut bool,
+    exit_unlocked: &mut bool,
+    block_size: usize,
+) -> bool {
+    const INTERACTION_DISTANCE: f32 = 40.0;
+
+    if *has_key {
+        for (row, cells) in maze.iter_mut().enumerate() {
+            for (column, cell) in cells.iter_mut().enumerate() {
+                if *cell != 'D' {
+                    continue;
+                }
+
+                let door_position = Vector2::new(
+                    (column as f32 + 0.5) * block_size as f32,
+                    (row as f32 + 0.5) * block_size as f32,
+                );
+                if player.pos.distance_to(door_position) <= INTERACTION_DISTANCE {
+                    *cell = ' ';
+                    *has_key = false;
+                    return true;
+                }
+            }
+        }
+    }
+
+    for pickup in pickups {
+        if matches!(pickup.kind, PickupKind::Switch)
+            && pickup.active
+            && player.pos.distance_to(pickup.pos) <= INTERACTION_DISTANCE
+        {
+            pickup.active = false;
+            *exit_unlocked = true;
+            return true;
+        }
+    }
+
+    false
 }
 
 fn enemy_can_move(position: Vector2, maze: &Maze, block_size: usize) -> bool {
@@ -195,7 +553,9 @@ fn enemy_can_move(position: Vector2, maze: &Maze, block_size: usize) -> bool {
 
     let column = position.x as usize / block_size;
     let row = position.y as usize / block_size;
-    row < maze.len() && column < maze[row].len() && matches!(maze[row][column], ' ' | 'g')
+    row < maze.len()
+        && column < maze[row].len()
+        && matches!(maze[row][column], ' ' | 'p' | 'g')
 }
 
 fn update_enemies(
@@ -203,14 +563,12 @@ fn update_enemies(
     maze: &Maze,
     player: &Player,
     sprites: &mut [Sprite],
+    projectiles: &mut Vec<Projectile>,
     block_size: usize,
     delta_time: f32,
-) -> bool {
-    const ENEMY_SPEED: f32 = 25.0;
-    const ATTACK_DISTANCE: f32 = 40.0;
-    const ATTACK_DELAY: f32 = 1.0;
-
-    let mut player_hit = false;
+) -> usize {
+    const ATTACK_RANGE: f32 = 220.0;
+    let mut shots_fired = 0;
 
     for sprite in sprites {
         if !sprite.active {
@@ -221,12 +579,12 @@ fn update_enemies(
         let dx = player.pos.x - sprite.pos.x;
         let dy = player.pos.y - sprite.pos.y;
         let distance = (dx * dx + dy * dy).sqrt();
-        let angle_to_player = dy.atan2(dx);
+        let angle_from_player = (sprite.pos.y - player.pos.y).atan2(sprite.pos.x - player.pos.x);
         let wall = cast_ray(
             framebuffer,
             maze,
             player,
-            angle_to_player,
+            angle_from_player,
             block_size,
             false,
         );
@@ -236,8 +594,13 @@ fn update_enemies(
             continue;
         }
 
-        if distance > ATTACK_DISTANCE {
-            let step = (ENEMY_SPEED * delta_time).min(distance - ATTACK_DISTANCE);
+        let (speed, attack_delay, projectile_speed) = match sprite.kind {
+            EnemyKind::Grunt => (25.0, 1.2, 90.0),
+            EnemyKind::Brute => (15.0, 1.8, 70.0),
+        };
+
+        if distance > ATTACK_RANGE {
+            let step = (speed * delta_time).min(distance - ATTACK_RANGE);
             let next_position = Vector2::new(
                 sprite.pos.x + dx / distance * step,
                 sprite.pos.y + dy / distance * step,
@@ -247,34 +610,92 @@ fn update_enemies(
                 sprite.pos = next_position;
             }
         } else if sprite.attack_cooldown == 0.0 {
-            sprite.attack_cooldown = ATTACK_DELAY;
-            player_hit = true;
+            sprite.attack_cooldown = attack_delay;
+            projectiles.push(Projectile {
+                pos: sprite.pos,
+                direction: Vector2::new(
+                    dx / distance * projectile_speed,
+                    dy / distance * projectile_speed,
+                ),
+                active: true,
+            });
+            shots_fired += 1;
         }
     }
 
-    player_hit
+    shots_fired
 }
 
-fn render_health_bar(framebuffer: &mut Framebuffer, health: i32) {
+fn update_projectiles(
+    projectiles: &mut [Projectile],
+    player: &Player,
+    maze: &Maze,
+    block_size: usize,
+    delta_time: f32,
+) -> usize {
+    const HIT_DISTANCE: f32 = 14.0;
+    let mut hits = 0;
+
+    for projectile in projectiles {
+        if !projectile.active {
+            continue;
+        }
+
+        let next_position = Vector2::new(
+            projectile.pos.x + projectile.direction.x * delta_time,
+            projectile.pos.y + projectile.direction.y * delta_time,
+        );
+
+        if next_position.distance_to(player.pos) <= HIT_DISTANCE {
+            projectile.active = false;
+            hits += 1;
+        } else if enemy_can_move(next_position, maze, block_size) {
+            projectile.pos = next_position;
+        } else {
+            projectile.active = false;
+        }
+    }
+
+    hits
+}
+
+fn render_status_bar(framebuffer: &mut Framebuffer, y: u32, value: i32, maximum: i32, color: Color) {
     const WIDTH: u32 = 160;
     const HEIGHT: u32 = 14;
     const X: u32 = 18;
-    const Y: u32 = 18;
-    let filled_width = (health.clamp(0, 100) as u32 * WIDTH) / 100;
+    let filled_width = (value.clamp(0, maximum) as u32 * WIDTH) / maximum as u32;
 
     framebuffer.set_current_color(Color::DARKGRAY);
-    for y in Y..Y + HEIGHT {
+    for y in y..y + HEIGHT {
         for x in X..X + WIDTH {
             framebuffer.set_pixel(x, y);
         }
     }
 
-    framebuffer.set_current_color(Color::RED);
-    for y in Y..Y + HEIGHT {
+    framebuffer.set_current_color(color);
+    for y in y..y + HEIGHT {
         for x in X..X + filled_width {
             framebuffer.set_pixel(x, y);
         }
     }
+}
+
+fn render_hud(
+    framebuffer: &mut Framebuffer,
+    health: i32,
+    ammo: i32,
+    enemies_alive: usize,
+    total_enemies: usize,
+) {
+    render_status_bar(framebuffer, 18, health, 100, Color::RED);
+    render_status_bar(framebuffer, 38, ammo, MAX_AMMO, Color::YELLOW);
+    render_status_bar(
+        framebuffer,
+        58,
+        enemies_alive as i32,
+        total_enemies.max(1) as i32,
+        Color::SKYBLUE,
+    );
 }
 
 fn render_world(
@@ -284,7 +705,10 @@ fn render_world(
     block_size: usize,
     textures: &TextureManager,
     sprites: &[Sprite],
+    pickups: &[Pickup],
+    projectiles: &[Projectile],
     time: f32,
+    shot_flash: bool,
 ) {
     let num_rays = framebuffer.width();
     let mut z_buffer = vec![0.0; num_rays as usize];
@@ -365,6 +789,10 @@ fn render_world(
     }
 
     for sprite in sprites {
+        let tint = match sprite.kind {
+            EnemyKind::Grunt => Color::WHITE,
+            EnemyKind::Brute => Color::RED,
+        };
         render_sprite(
             framebuffer,
             &render_player,
@@ -372,12 +800,69 @@ fn render_world(
             textures,
             &z_buffer,
             time,
+            tint,
+        );
+    }
+
+    for pickup in pickups {
+        if !pickup.active {
+            continue;
+        }
+
+        let pickup_sprite = Sprite {
+            pos: pickup.pos,
+            texture: 's',
+            size: block_size as f32 * 0.6,
+            active: true,
+            health: 0,
+            attack_cooldown: 0.0,
+            kind: EnemyKind::Grunt,
+        };
+        let tint = match pickup.kind {
+            PickupKind::Health => Color::GREEN,
+            PickupKind::Ammo => Color::YELLOW,
+            PickupKind::Key => Color::SKYBLUE,
+            PickupKind::Switch => Color::PURPLE,
+        };
+        render_sprite(
+            framebuffer,
+            &render_player,
+            &pickup_sprite,
+            textures,
+            &z_buffer,
+            time,
+            tint,
+        );
+    }
+
+    for projectile in projectiles {
+        if !projectile.active {
+            continue;
+        }
+
+        let projectile_sprite = Sprite {
+            pos: projectile.pos,
+            texture: 's',
+            size: block_size as f32 * 0.2,
+            active: true,
+            health: 0,
+            attack_cooldown: 0.0,
+            kind: EnemyKind::Grunt,
+        };
+        render_sprite(
+            framebuffer,
+            &render_player,
+            &projectile_sprite,
+            textures,
+            &z_buffer,
+            time,
+            Color::ORANGE,
         );
     }
 
     let center_x = framebuffer.width() / 2;
     let center_y = framebuffer.height() / 2;
-    framebuffer.set_current_color(Color::WHITE);
+    framebuffer.set_current_color(if shot_flash { Color::YELLOW } else { Color::WHITE });
     for offset in 0..=4 {
         framebuffer.set_pixel(center_x - offset, center_y);
         framebuffer.set_pixel(center_x + offset, center_y);
@@ -420,27 +905,34 @@ fn main() {
     hit_sound.set_volume(0.85);
     music.play_stream();
 
-    let level_files = ["maze.txt", "maze_level_2.txt"];
+    let level_files = ["maps/mapa1.txt", "maps/mapa2.txt"];
     let mut selected_level = 0;
     let mut maze = load_maze(level_files[selected_level]);
 
     let mut player = Player {
-        pos: Vector2::new(75.0, 75.0),
+        pos: player_start_position(&maze, block_size),
         a: 0.0,
         fov: PI / 3.0,
     };
-    let mut sprites = [spawn_enemy(block_size)];
+    let mut sprites = spawn_enemies(selected_level, &maze, block_size);
+    let mut pickups = spawn_pickups(selected_level, &maze, block_size);
     let mut player_health = 100;
+    let mut ammo = 6;
+    let mut has_key = false;
+    let mut exit_unlocked = false;
+    let mut projectiles = Vec::new();
+    let mut shot_flash = 0.0;
 
     let mut mode_3d = false;
     let mut m_was_down = false;
     let mut welcome_screen = true;
     let mut success_screen = false;
+    let mut defeat_screen = false;
 
     while !window.window_should_close() {
         let screen_width = window.get_screen_width().max(1) as u32;
         let screen_height = window.get_screen_height().max(1) as u32;
-        let render_width = if screen_width > window_width as u32 {
+        let render_width = if window.is_window_fullscreen() {
             fullscreen_render_width
         } else {
             window_width as u32
@@ -464,10 +956,16 @@ fn main() {
 
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
                 maze = load_maze(level_files[selected_level]);
-                player.pos = Vector2::new(75.0, 75.0);
+                player.pos = player_start_position(&maze, block_size);
                 player.a = 0.0;
-                sprites[0] = spawn_enemy(block_size);
+                sprites = spawn_enemies(selected_level, &maze, block_size);
+                pickups = spawn_pickups(selected_level, &maze, block_size);
                 player_health = 100;
+                ammo = 6;
+                has_key = false;
+                exit_unlocked = false;
+                projectiles.clear();
+                shot_flash = 0.0;
                 welcome_screen = false;
             }
 
@@ -477,6 +975,7 @@ fn main() {
                 &raylib_thread,
                 welcome_screen,
                 selected_level,
+                false,
                 false,
             );
             continue;
@@ -489,23 +988,70 @@ fn main() {
             }
 
             framebuffer.clear();
-            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, true);
+            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, true, false);
             continue;
         }
 
-        // 1. clear framebuffer
-        framebuffer.clear();
+        if defeat_screen {
+            if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                maze = load_maze(level_files[selected_level]);
+                player.pos = player_start_position(&maze, block_size);
+                player.a = 0.0;
+                sprites = spawn_enemies(selected_level, &maze, block_size);
+                pickups = spawn_pickups(selected_level, &maze, block_size);
+                player_health = 100;
+                ammo = 6;
+                has_key = false;
+                exit_unlocked = false;
+                projectiles.clear();
+                shot_flash = 0.0;
+                defeat_screen = false;
+            } else if window.is_key_pressed(KeyboardKey::KEY_L) {
+                welcome_screen = true;
+                defeat_screen = false;
+            }
 
-        // 2. move the player on user input
+            framebuffer.clear();
+            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false, true);
+            continue;
+        }
+
+        // 1. move the player on user input
+        let delta_time = window.get_frame_time();
+        shot_flash = (shot_flash - delta_time).max(0.0);
         let shot_fired = process_events(&window, &mut player, &maze, block_size);
+        if collect_pickups(
+            &player,
+            &mut pickups,
+            &mut player_health,
+            &mut ammo,
+            &mut has_key,
+        ) {
+            hit_sound.play();
+        }
 
-        if player_reached_goal(&player, &maze, block_size) {
+        if window.is_key_pressed(KeyboardKey::KEY_E)
+            && interact_with_level(
+                &player,
+                &mut maze,
+                &mut pickups,
+                &mut has_key,
+                &mut exit_unlocked,
+                block_size,
+            )
+        {
+            hit_sound.play();
+        }
+
+        if player_reached_goal(&player, &maze, &sprites, exit_unlocked, block_size) {
             success_screen = true;
             continue;
         }
 
-        if shot_fired && mode_3d {
+        if shot_fired && mode_3d && ammo > 0 {
+            ammo -= 1;
             shoot_sound.play();
+            shot_flash = 0.08;
 
             let wall = cast_ray(
                 &mut framebuffer,
@@ -523,25 +1069,30 @@ fn main() {
             }
         }
 
-        if mode_3d
-            && update_enemies(
+        if mode_3d {
+            let enemy_shots = update_enemies(
                 &mut framebuffer,
                 &maze,
                 &player,
                 &mut sprites,
+                &mut projectiles,
                 block_size,
-                window.get_frame_time(),
-            )
-        {
-            player_health = (player_health - 10).max(0);
-            hit_sound.play();
-
-            if player_health == 0 {
-                player.pos = Vector2::new(75.0, 75.0);
-                player.a = 0.0;
-                player_health = 100;
-                sprites[0] = spawn_enemy(block_size);
+                delta_time,
+            );
+            if enemy_shots > 0 {
+                hit_sound.play();
             }
+
+            let projectile_hits =
+                update_projectiles(&mut projectiles, &player, &maze, block_size, delta_time);
+            if projectile_hits > 0 {
+                player_health = (player_health - 10 * projectile_hits as i32).max(0);
+                hit_sound.play();
+                if player_health == 0 {
+                    defeat_screen = true;
+                }
+            }
+            projectiles.retain(|projectile| projectile.active);
         }
 
         let m_is_down = window.is_key_down(KeyboardKey::KEY_M);
@@ -600,12 +1151,21 @@ fn main() {
                 block_size,
                 &textures,
                 &sprites,
+                &pickups,
+                &projectiles,
                 window.get_time() as f32,
+                shot_flash > 0.0,
             );
             render_minimap(&mut framebuffer, &maze, &player, block_size);
-            render_health_bar(&mut framebuffer, player_health);
+            render_hud(
+                &mut framebuffer,
+                player_health,
+                ammo,
+                sprites.iter().filter(|sprite| sprite.active).count(),
+                sprites.len(),
+            );
         }
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false);
+        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false, false);
     }
 }

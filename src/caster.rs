@@ -88,7 +88,7 @@ pub fn cast_ray(
         }
 
         let impact = maze[cell_y as usize][cell_x as usize];
-        if impact != ' ' {
+        if impact != ' ' && impact != 'p' {
             if draw_line {
                 for d in 0..distance.ceil() as u32 {
                     let x = player.pos.x + d as f32 * ray_x;

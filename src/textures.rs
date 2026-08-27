@@ -16,6 +16,7 @@ impl TextureManager {
             ('-', "assets/wall.png"),
             ('|', "assets/wall.png"),
             ('g', "assets/wall.png"),
+            ('D', "assets/wall.png"),
             ('#', "assets/wall.png"), // default/fallback
             ('s', "assets/sprite.png"),
         ];

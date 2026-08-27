@@ -37,11 +37,7 @@ impl Framebuffer {
 
     pub fn clear(&mut self) {
         // limpien su buffer de colores
-        self.color_buffer = Image::gen_image_color(
-            self.width as i32,
-            self.height as i32,
-            self.background_color,
-        );
+        self.color_buffer.clear_background(self.background_color);
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32) {
@@ -74,6 +70,7 @@ impl Framebuffer {
         show_welcome: bool,
         selected_level: usize,
         show_success: bool,
+        show_defeat: bool,
     ) {
         // La textura de presentación se crea una sola vez por tamaño de framebuffer.
         if self.display_texture.is_none() {
@@ -132,7 +129,7 @@ impl Framebuffer {
                 renderer.draw_text("Nivel 1", center_x - 50, screen_height / 2 + 25, 22, level_one_color);
                 renderer.draw_text("Nivel 2", center_x - 50, screen_height / 2 + 55, 22, level_two_color);
                 renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", center_x - 215, screen_height / 2 + 120, 20, Color::WHITE);
-                renderer.draw_text("Mouse: girar | Clic izquierdo: disparar | M: vista 2D/3D", center_x - 265, screen_height / 2 + 155, 16, Color::LIGHTGRAY);
+                renderer.draw_text("Mouse: girar | Clic: disparar | E: usar | M: vista 2D/3D", center_x - 245, screen_height / 2 + 155, 16, Color::LIGHTGRAY);
             } else if show_success {
                 renderer.draw_rectangle(
                     0,
@@ -143,6 +140,17 @@ impl Framebuffer {
                 );
                 renderer.draw_text("NIVEL COMPLETADO", screen_width / 2 - 220, screen_height / 2 - 50, 48, Color::GREEN);
                 renderer.draw_text("Presiona ENTER para elegir otro nivel", screen_width / 2 - 195, screen_height / 2 + 50, 24, Color::WHITE);
+            } else if show_defeat {
+                renderer.draw_rectangle(
+                    0,
+                    0,
+                    screen_width,
+                    screen_height,
+                    Color::new(42, 8, 8, 255),
+                );
+                renderer.draw_text("HAS SIDO DERROTADO", screen_width / 2 - 245, screen_height / 2 - 50, 48, Color::RED);
+                renderer.draw_text("ENTER: reiniciar nivel", screen_width / 2 - 145, screen_height / 2 + 30, 24, Color::WHITE);
+                renderer.draw_text("L: elegir nivel", screen_width / 2 - 90, screen_height / 2 + 65, 20, Color::LIGHTGRAY);
             }
 
             renderer.draw_fps(screen_width - 90, screen_height - 30);

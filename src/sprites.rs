@@ -4,6 +4,12 @@ use crate::framebuffer::Framebuffer;
 use crate::player::Player;
 use crate::textures::TextureManager;
 
+#[derive(Clone, Copy)]
+pub enum EnemyKind {
+    Grunt,
+    Brute,
+}
+
 pub struct Sprite {
     pub pos: Vector2,
     pub texture: char,
@@ -11,6 +17,7 @@ pub struct Sprite {
     pub active: bool,
     pub health: i32,
     pub attack_cooldown: f32,
+    pub kind: EnemyKind,
 }
 
 pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) -> bool {
@@ -42,6 +49,7 @@ pub fn render_sprite(
     textures: &TextureManager,
     z_buffer: &[f32],
     time: f32,
+    tint: Color,
 ) {
     if !sprite.active {
         return;
@@ -95,7 +103,12 @@ pub fn render_sprite(
             let color = textures.get_pixel_color(sprite.texture, tx, ty);
 
             if color.a > 0 {
-                framebuffer.set_current_color(color);
+                framebuffer.set_current_color(Color::new(
+                    (color.r as u16 * tint.r as u16 / 255) as u8,
+                    (color.g as u16 * tint.g as u16 / 255) as u8,
+                    (color.b as u16 * tint.b as u16 / 255) as u8,
+                    color.a,
+                ));
                 framebuffer.set_pixel(screen_x, screen_y);
             }
         }
