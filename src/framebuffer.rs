@@ -48,19 +48,9 @@ impl Framebuffer {
         }
     }
 
-    pub fn set_background_color(&mut self, color: Color) {
-        // setten el color de fondo
-        self.background_color = color;
-    }
-
     pub fn set_current_color(&mut self, color: Color) {
         // setten el color
         self.current_color = color;
-    }
-
-    pub fn render_to_file(&self, file_path: &str) {
-        // guarden su framebuffer a un archivo usando export
-        self.color_buffer.export_image(file_path);
     }
 
     pub fn swap_buffers(
