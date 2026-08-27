@@ -54,7 +54,7 @@ fn main() {
 
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
-        .title("Mundo 3D")
+        .title("Droom Ball Super")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
     window.disable_cursor();
@@ -95,6 +95,7 @@ fn main() {
 
     let level_files = ["maps/mapa1.txt", "maps/mapa3.txt", "maps/mapa2.txt"];
     let mut selected_level = 0;
+    let mut highest_unlocked_level = 0;
     let mut maze = load_maze(level_files[selected_level]);
 
     let mut player = Player {
@@ -136,11 +137,11 @@ fn main() {
         music.update_stream();
 
         if welcome_screen {
-            if window.is_key_pressed(KeyboardKey::KEY_UP) {
+            if window.is_key_pressed(KeyboardKey::KEY_W) {
                 selected_level = selected_level.saturating_sub(1);
             }
-            if window.is_key_pressed(KeyboardKey::KEY_DOWN) {
-                selected_level = (selected_level + 1).min(level_files.len() - 1);
+            if window.is_key_pressed(KeyboardKey::KEY_S) {
+                selected_level = (selected_level + 1).min(highest_unlocked_level);
             }
 
             if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
@@ -248,6 +249,7 @@ fn main() {
 
         if player_reached_goal(&player, &maze, &sprites, exit_unlocked, block_size) {
             shenron_sound.play();
+            highest_unlocked_level = (selected_level + 1).min(level_files.len() - 1);
             success_screen = true;
             continue;
         }
@@ -367,7 +369,6 @@ fn main() {
                 ammo,
                 MAX_AMMO,
                 sprites.iter().filter(|sprite| sprite.active).count(),
-                sprites.len(),
             );
         }
 

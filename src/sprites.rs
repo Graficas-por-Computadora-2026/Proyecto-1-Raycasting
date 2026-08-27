@@ -48,7 +48,7 @@ pub fn render_sprite(
     sprite: &Sprite,
     textures: &TextureManager,
     z_buffer: &[f32],
-    time: f32,
+    _time: f32,
     tint: Color,
 ) {
     if !sprite.active {
@@ -80,8 +80,9 @@ pub fn render_sprite(
     let sprite_width = sprite_height * texture_width as f32 / texture_height as f32;
     let center_x = framebuffer.width() as f32 / 2.0
         + angle_difference / (player.fov / 2.0) * framebuffer.width() as f32 / 2.0;
-    let bob_offset = (time * 3.0).sin() * sprite_height * 0.025;
-    let bottom = framebuffer.height() as f32 / 2.0 + bob_offset;
+    // Move the base into the projected floor; this keeps sprites and pickups
+    // visually grounded instead of hanging at the horizon.
+    let bottom = framebuffer.height() as f32 / 2.0 + sprite_height * 0.35;
     let top = bottom - sprite_height;
     let left = center_x - sprite_width / 2.0;
     let right = center_x + sprite_width / 2.0;

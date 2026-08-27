@@ -5,6 +5,9 @@ pub struct Framebuffer {
     height: u32,
     color_buffer: Image,
     display_texture: Option<Texture2D>,
+    yamcha_texture: Option<Texture2D>,
+    sphere_texture: Option<Texture2D>,
+    porunga_texture: Option<Texture2D>,
     background_color: Color,
     current_color: Color,
 }
@@ -30,6 +33,9 @@ impl Framebuffer {
             height,
             color_buffer,
             display_texture: None,
+            yamcha_texture: None,
+            sphere_texture: None,
+            porunga_texture: None,
             background_color,
             current_color: Color::WHITE,
         }
@@ -72,6 +78,16 @@ impl Framebuffer {
             self.display_texture = Some(texture);
         }
 
+        if self.yamcha_texture.is_none() {
+            self.yamcha_texture = window.load_texture(raylib_thread, "assets/yamcha.png").ok();
+        }
+        if self.sphere_texture.is_none() {
+            self.sphere_texture = window.load_texture(raylib_thread, "assets/sphere1.png").ok();
+        }
+        if self.porunga_texture.is_none() {
+            self.porunga_texture = window.load_texture(raylib_thread, "assets/porunga.png").ok();
+        }
+
         let pixel_count = (self.width * self.height * 4) as usize;
         let pixels = unsafe {
             std::slice::from_raw_parts(self.color_buffer.data() as *const u8, pixel_count)
@@ -102,48 +118,89 @@ impl Framebuffer {
             );
 
             if show_welcome {
-                renderer.draw_rectangle(
-                    0,
-                    0,
-                    screen_width,
-                    screen_height,
-                    Color::new(12, 18, 35, 255),
-                );
+                draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(16, 36, 90, 255));
                 let center_x = screen_width / 2;
-                renderer.draw_text("MUNDO 3D", center_x - 130, screen_height / 3 - 20, 52, Color::SKYBLUE);
+                renderer.draw_text("DROOM BALL SUPER", center_x - 240, screen_height / 3 - 20, 52, Color::ORANGE);
                 renderer.draw_text("Selecciona un nivel", center_x - 115, screen_height / 2 - 20, 24, Color::WHITE);
-                let level_one_color = if selected_level == 0 { Color::SKYBLUE } else { Color::LIGHTGRAY };
-                let level_two_color = if selected_level == 1 { Color::SKYBLUE } else { Color::LIGHTGRAY };
-                let level_three_color = if selected_level == 2 { Color::SKYBLUE } else { Color::LIGHTGRAY };
+                let level_one_color = if selected_level == 0 { Color::YELLOW } else { Color::LIGHTGRAY };
+                let level_two_color = if selected_level == 1 { Color::YELLOW } else { Color::LIGHTGRAY };
+                let level_three_color = if selected_level == 2 { Color::YELLOW } else { Color::LIGHTGRAY };
                 renderer.draw_text("Nivel 1", center_x - 50, screen_height / 2 + 25, 22, level_one_color);
                 renderer.draw_text("Nivel 2", center_x - 50, screen_height / 2 + 55, 22, level_two_color);
                 renderer.draw_text("Nivel 3", center_x - 50, screen_height / 2 + 85, 22, level_three_color);
-                renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", center_x - 215, screen_height / 2 + 145, 20, Color::WHITE);
-                renderer.draw_text("Mouse: girar | Clic: disparar | E: usar | M: vista 2D/3D", center_x - 245, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
+                renderer.draw_text("W/S y ENTER para comenzar", center_x - 145, screen_height / 2 + 145, 20, Color::WHITE);
+                renderer.draw_text("W/S: mover | A/D o mouse: girar | ESPACIO: disparar | E: usar | M: vista 2D/3D", center_x - 335, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
             } else if show_success {
-                renderer.draw_rectangle(
-                    0,
-                    0,
-                    screen_width,
-                    screen_height,
-                    Color::new(12, 35, 20, 255),
-                );
-                renderer.draw_text("NIVEL COMPLETADO", screen_width / 2 - 220, screen_height / 2 - 50, 48, Color::GREEN);
-                renderer.draw_text("Presiona ENTER para elegir otro nivel", screen_width / 2 - 195, screen_height / 2 + 50, 24, Color::WHITE);
+                draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(12, 66, 42, 255));
+                if selected_level == 2 {
+                    if let Some(texture) = self.porunga_texture.as_ref() {
+                        draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.62);
+                    }
+                    renderer.draw_text("PORUNGA HA SIDO INVOCADO", screen_width / 2 - 280, 72, 42, Color::GREEN);
+                    renderer.draw_text("HAS REUNIDO LAS ESFERAS DEL DRAGON", screen_width / 2 - 265, screen_height - 112, 26, Color::YELLOW);
+                } else {
+                    if let Some(texture) = self.sphere_texture.as_ref() {
+                        draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.36);
+                    }
+                    renderer.draw_text("HAS RECOLECTADO UNA ESFERA", screen_width / 2 - 285, 82, 42, Color::YELLOW);
+                    renderer.draw_text("DEL DRAGON", screen_width / 2 - 100, 128, 32, Color::ORANGE);
+                }
+                renderer.draw_text("ENTER: elegir nivel", screen_width / 2 - 125, screen_height - 60, 22, Color::WHITE);
             } else if show_defeat {
-                renderer.draw_rectangle(
-                    0,
-                    0,
-                    screen_width,
-                    screen_height,
-                    Color::new(42, 8, 8, 255),
-                );
-                renderer.draw_text("HAS SIDO DERROTADO", screen_width / 2 - 245, screen_height / 2 - 50, 48, Color::RED);
-                renderer.draw_text("ENTER: reiniciar nivel", screen_width / 2 - 145, screen_height / 2 + 30, 24, Color::WHITE);
-                renderer.draw_text("L: elegir nivel", screen_width / 2 - 90, screen_height / 2 + 65, 20, Color::LIGHTGRAY);
+                draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(72, 12, 10, 255));
+                if let Some(texture) = self.yamcha_texture.as_ref() {
+                    draw_centered_texture(&mut renderer, texture, screen_width, screen_height, 0.60);
+                }
+                renderer.draw_text("HAS SIDO ELIMINADO", screen_width / 2 - 245, 62, 48, Color::YELLOW);
+                renderer.draw_text("ENTER: reiniciar nivel", screen_width / 2 - 145, screen_height - 88, 24, Color::WHITE);
+                renderer.draw_text("L: elegir nivel", screen_width / 2 - 90, screen_height - 53, 20, Color::LIGHTGRAY);
             }
 
             renderer.draw_fps(screen_width - 90, screen_height - 30);
         }
     }
+}
+
+fn draw_dragon_ball_background<D: RaylibDraw>(
+    renderer: &mut D,
+    screen_width: i32,
+    screen_height: i32,
+    color: Color,
+) {
+    renderer.draw_rectangle(0, 0, screen_width, screen_height, color);
+    renderer.draw_rectangle(0, 0, screen_width, 14, Color::ORANGE);
+    renderer.draw_rectangle(0, screen_height - 14, screen_width, 14, Color::ORANGE);
+    for index in 0..7 {
+        let x = 30 + index * 42;
+        renderer.draw_circle(x, 34, 14.0, Color::ORANGE);
+        renderer.draw_circle(x, 34, 3.0, Color::RED);
+    }
+}
+
+fn draw_centered_texture<D: RaylibDraw>(
+    renderer: &mut D,
+    texture: &Texture2D,
+    screen_width: i32,
+    screen_height: i32,
+    max_size: f32,
+) {
+    let source_width = texture.width() as f32;
+    let source_height = texture.height() as f32;
+    let scale = (screen_width as f32 * max_size / source_width)
+        .min(screen_height as f32 * max_size / source_height);
+    let width = source_width * scale;
+    let height = source_height * scale;
+    renderer.draw_texture_pro(
+        texture,
+        Rectangle::new(0.0, 0.0, source_width, source_height),
+        Rectangle::new(
+            (screen_width as f32 - width) / 2.0,
+            (screen_height as f32 - height) / 2.0,
+            width,
+            height,
+        ),
+        Vector2::zero(),
+        0.0,
+        Color::WHITE,
+    );
 }

@@ -16,27 +16,28 @@ pub fn process_events(
 
     player.a += window.get_mouse_delta().x * MOUSE_SENSITIVITY;
 
-    if window.is_key_down(KeyboardKey::KEY_LEFT) {
+    if window.is_key_down(KeyboardKey::KEY_A) {
         // rotate the view range to the left
         player.a -= ROTATION_SPEED;
     }
 
-    if window.is_key_down(KeyboardKey::KEY_RIGHT) {
+    if window.is_key_down(KeyboardKey::KEY_D) {
         // rotate the view range to the right
         player.a += ROTATION_SPEED;
     }
 
-    if window.is_key_down(KeyboardKey::KEY_UP) {
+    if window.is_key_down(KeyboardKey::KEY_W) {
         // increase player position in x and y in the direction of view
         move_player(player, MOVE_SPEED, maze, block_size);
     }
 
-    if window.is_key_down(KeyboardKey::KEY_DOWN) {
+    if window.is_key_down(KeyboardKey::KEY_S) {
         // decrease player position in x and y in the direction of view
         move_player(player, -MOVE_SPEED, maze, block_size);
     }
 
     window.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT)
+        || window.is_key_pressed(KeyboardKey::KEY_SPACE)
 }
 
 fn move_player(player: &mut Player, distance: f32, maze: &Maze, block_size: usize) {

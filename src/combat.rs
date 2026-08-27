@@ -51,15 +51,18 @@ fn spawn_enemy(position: Vector2, kind: EnemyKind, block_size: usize) -> Sprite 
 pub fn spawn_enemies(level: usize, maze: &Maze, block_size: usize) -> Vec<Sprite> {
     let cells = reachable_cells(maze);
     if !cells.is_empty() {
-        let enemy_cells = [cells[cells.len() / 3], cells[cells.len() * 2 / 3]];
-        return enemy_cells
-            .into_iter()
-            .enumerate()
-            .map(|(index, cell)| {
-                let kind = if index == 0 {
-                    EnemyKind::Grunt
-                } else {
+        let enemy_count = match level {
+            0 => 2,
+            1 => 4,
+            _ => 6,
+        };
+        return (0..enemy_count)
+            .map(|index| {
+                let cell = cells[cells.len() * (index + 1) / (enemy_count + 1)];
+                let kind = if level > 0 && index % 2 == 1 {
                     EnemyKind::Brute
+                } else {
+                    EnemyKind::Grunt
                 };
                 spawn_enemy(cell_position(cell, block_size), kind, block_size)
             })
@@ -88,19 +91,41 @@ pub fn spawn_enemies(level: usize, maze: &Maze, block_size: usize) -> Vec<Sprite
 pub fn spawn_pickups(level: usize, maze: &Maze, block_size: usize) -> Vec<Pickup> {
     let cells = reachable_cells(maze);
     if !cells.is_empty() {
-        let pickups = [
-            (cells[cells.len() / 6], PickupKind::Ammo),
-            (cells[cells.len() / 2], PickupKind::Health),
-            (cells[cells.len() * 4 / 5], PickupKind::Switch),
-        ];
-        return pickups
-            .into_iter()
-            .map(|(cell, kind)| Pickup {
-                pos: cell_position(cell, block_size),
-                kind,
+        let (health_count, ammo_count) = match level {
+            // Early levels are deliberately generous while the player learns.
+            0 => (4, 5),
+            1 => (3, 4),
+            // 24 enemy health: four boxes provide six spare shots, so a
+            // complete ammo box can be spent and the level remains winnable.
+            _ => (2, 4),
+        };
+        let regular_pickups = health_count + ammo_count;
+        let mut pickups = Vec::with_capacity(regular_pickups + 1);
+
+        for index in 0..health_count {
+            let health_cell = cells[cells.len() * (index + 1) / (regular_pickups + 2)];
+            pickups.push(Pickup {
+                pos: cell_position(health_cell, block_size),
+                kind: PickupKind::Health,
                 active: true,
-            })
-            .collect();
+            });
+        }
+
+        for index in 0..ammo_count {
+            let ammo_cell = cells[cells.len() * (health_count + index + 1) / (regular_pickups + 2)];
+            pickups.push(Pickup {
+                pos: cell_position(ammo_cell, block_size),
+                kind: PickupKind::Ammo,
+                active: true,
+            });
+        }
+
+        pickups.push(Pickup {
+            pos: cell_position(cells[cells.len() * 4 / 5], block_size),
+            kind: PickupKind::Switch,
+            active: true,
+        });
+        return pickups;
     }
 
     let items = match level {
@@ -200,8 +225,6 @@ pub fn update_enemies(
     block_size: usize,
     delta_time: f32,
 ) -> usize {
-    const SIGHT_RANGE: f32 = 1_200.0;
-    const ATTACK_RANGE: f32 = 75.0;
     let mut shots_fired = 0;
 
     for sprite in sprites {
@@ -213,7 +236,7 @@ pub fn update_enemies(
         let dx = player.pos.x - sprite.pos.x;
         let dy = player.pos.y - sprite.pos.y;
         let distance = (dx * dx + dy * dy).sqrt();
-        if distance < f32::EPSILON || distance > SIGHT_RANGE {
+        if distance < f32::EPSILON {
             continue;
         }
         let angle_from_player = (sprite.pos.y - player.pos.y).atan2(sprite.pos.x - player.pos.x);
@@ -231,11 +254,11 @@ pub fn update_enemies(
         }
 
         let (speed, attack_delay, projectile_speed) = match sprite.kind {
-            EnemyKind::Grunt => (70.0, 1.2, 90.0),
+            EnemyKind::Grunt => (45.0, 1.2, 90.0),
             EnemyKind::Brute => (50.0, 1.8, 70.0),
         };
 
-        if distance <= ATTACK_RANGE && sprite.attack_cooldown == 0.0 {
+        if sprite.attack_cooldown == 0.0 {
             sprite.attack_cooldown = attack_delay;
             projectiles.push(Projectile {
                 pos: sprite.pos,
