@@ -39,10 +39,21 @@ pub fn render_world(
 
     let horizon = hh as u32;
 
-    framebuffer.set_current_color(Color::new(135, 206, 235, 255));
-    for y in 0..horizon {
-        for x in 0..framebuffer.width() {
-            framebuffer.set_pixel(x, y);
+    if let Some((sky_width, sky_height)) = textures.dimensions('c') {
+        for y in 0..horizon {
+            let ty = y * sky_height / horizon.max(1);
+            for x in 0..framebuffer.width() {
+                let tx = x * sky_width / framebuffer.width().max(1);
+                framebuffer.set_current_color(textures.get_pixel_color('c', tx, ty));
+                framebuffer.set_pixel(x, y);
+            }
+        }
+    } else {
+        framebuffer.set_current_color(Color::SKYBLUE);
+        for y in 0..horizon {
+            for x in 0..framebuffer.width() {
+                framebuffer.set_pixel(x, y);
+            }
         }
     }
 
@@ -176,4 +187,3 @@ pub fn render_world(
         framebuffer.set_pixel(center_x, center_y + offset);
     }
 }
-

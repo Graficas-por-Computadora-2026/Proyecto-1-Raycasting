@@ -12,6 +12,7 @@ impl TextureManager {
 
         let texture_files = vec![
             ('#', "assets/nivel1.png"),
+            ('c', "assets/sky.png"),
             ('h', "assets/hermitaño.png"),
             ('a', "assets/ki.png"),
             ('x', "assets/sphere1.png"),
