@@ -101,10 +101,6 @@ pub fn render_world(
     }
 
     for sprite in sprites {
-        let tint = match sprite.kind {
-            EnemyKind::Grunt => Color::WHITE,
-            EnemyKind::Brute => Color::RED,
-        };
         render_sprite(
             framebuffer,
             &render_player,
@@ -112,7 +108,7 @@ pub fn render_world(
             textures,
             &z_buffer,
             time,
-            tint,
+            Color::WHITE,
         );
     }
 
@@ -135,12 +131,6 @@ pub fn render_world(
             attack_cooldown: 0.0,
             kind: EnemyKind::Grunt,
         };
-        let tint = match pickup.kind {
-            PickupKind::Health => Color::GREEN,
-            PickupKind::Ammo => Color::YELLOW,
-            PickupKind::Key => Color::SKYBLUE,
-            PickupKind::Switch => Color::PURPLE,
-        };
         render_sprite(
             framebuffer,
             &render_player,
@@ -148,7 +138,7 @@ pub fn render_world(
             textures,
             &z_buffer,
             time,
-            tint,
+            Color::WHITE,
         );
     }
 
@@ -173,7 +163,7 @@ pub fn render_world(
             textures,
             &z_buffer,
             time,
-            Color::ORANGE,
+            Color::WHITE,
         );
     }
 
