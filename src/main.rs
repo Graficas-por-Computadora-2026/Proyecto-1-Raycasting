@@ -240,7 +240,7 @@ fn main() {
         window_height as u32,
         Color::BLACK,
     );
-    let textures = TextureManager::new(&mut window, &raylib_thread);
+    let textures = TextureManager::new();
     let audio = RaylibAudio::init_audio_device().expect("Failed to initialize audio");
     let music = audio
         .new_music("assets/guichin.mp3")

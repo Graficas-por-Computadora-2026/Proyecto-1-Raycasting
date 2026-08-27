@@ -4,13 +4,11 @@ use std::slice;
 
 pub struct TextureManager {
     images: HashMap<char, Image>,
-    textures: HashMap<char, Texture2D>,
 }
 
 impl TextureManager {
-    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new() -> Self {
         let mut images = HashMap::new();
-        let mut textures = HashMap::new();
 
         // Map maze characters to texture file paths.
         let texture_files = vec![
@@ -25,14 +23,10 @@ impl TextureManager {
         for (ch, path) in texture_files {
             let image = Image::load_image(path)
                 .unwrap_or_else(|_| panic!("Failed to load image {path}"));
-            let texture = rl
-                .load_texture(thread, path)
-                .unwrap_or_else(|_| panic!("Failed to load texture {path}"));
             images.insert(ch, image);
-            textures.insert(ch, texture);
         }
 
-        TextureManager { images, textures }
+        TextureManager { images }
     }
 
     pub fn get_pixel_color(&self, ch: char, tx: u32, ty: u32) -> Color {
@@ -52,10 +46,6 @@ impl TextureManager {
             .get(&ch)
             .or_else(|| self.images.get(&'#'))
             .map(|image| (image.width as u32, image.height as u32))
-    }
-
-    pub fn get_texture(&self, ch: char) -> Option<&Texture2D> {
-        self.textures.get(&ch)
     }
 }
 
