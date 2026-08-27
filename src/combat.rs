@@ -13,7 +13,6 @@ pub const MAX_AMMO: i32 = 12;
 pub enum PickupKind {
     Health,
     Ammo,
-    Key,
     Switch,
 }
 
@@ -106,13 +105,11 @@ pub fn spawn_pickups(level: usize, maze: &Maze, block_size: usize) -> Vec<Pickup
 
     let items = match level {
         0 => vec![
-            (Vector2::new(125.0, 75.0), PickupKind::Key),
             (Vector2::new(175.0, 75.0), PickupKind::Ammo),
             (Vector2::new(350.0, 75.0), PickupKind::Health),
             (Vector2::new(425.0, 75.0), PickupKind::Switch),
         ],
         1 => vec![
-            (Vector2::new(125.0, 75.0), PickupKind::Key),
             (Vector2::new(150.0, 75.0), PickupKind::Health),
             (Vector2::new(350.0, 75.0), PickupKind::Ammo),
             (Vector2::new(500.0, 75.0), PickupKind::Ammo),
@@ -136,7 +133,6 @@ pub fn collect_pickups(
     pickups: &mut [Pickup],
     health: &mut i32,
     ammo: &mut i32,
-    has_key: &mut bool,
 ) -> bool {
     const PICKUP_DISTANCE: f32 = 28.0;
     let mut collected = false;
@@ -149,7 +145,6 @@ pub fn collect_pickups(
         match pickup.kind {
             PickupKind::Health => *health = (*health + 25).min(100),
             PickupKind::Ammo => *ammo = (*ammo + 6).min(MAX_AMMO),
-            PickupKind::Key => *has_key = true,
             PickupKind::Switch => continue,
         }
         pickup.active = false;
@@ -163,31 +158,10 @@ pub fn interact_with_level(
     player: &Player,
     maze: &mut Maze,
     pickups: &mut [Pickup],
-    has_key: &mut bool,
     exit_unlocked: &mut bool,
     block_size: usize,
 ) -> bool {
     const INTERACTION_DISTANCE: f32 = 40.0;
-
-    if *has_key {
-        for (row, cells) in maze.iter_mut().enumerate() {
-            for (column, cell) in cells.iter_mut().enumerate() {
-                if *cell != 'D' {
-                    continue;
-                }
-
-                let door_position = Vector2::new(
-                    (column as f32 + 0.5) * block_size as f32,
-                    (row as f32 + 0.5) * block_size as f32,
-                );
-                if player.pos.distance_to(door_position) <= INTERACTION_DISTANCE {
-                    *cell = ' ';
-                    *has_key = false;
-                    return true;
-                }
-            }
-        }
-    }
 
     for pickup in pickups {
         if matches!(pickup.kind, PickupKind::Switch)

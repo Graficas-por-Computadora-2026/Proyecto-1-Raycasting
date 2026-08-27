@@ -91,7 +91,6 @@ fn main() {
     let mut pickups = spawn_pickups(selected_level, &maze, block_size);
     let mut player_health = 100;
     let mut ammo = 6;
-    let mut has_key = false;
     let mut exit_unlocked = false;
     let mut projectiles = Vec::new();
     let mut shot_flash = 0.0;
@@ -137,7 +136,6 @@ fn main() {
                 pickups = spawn_pickups(selected_level, &maze, block_size);
                 player_health = 100;
                 ammo = 6;
-                has_key = false;
                 exit_unlocked = false;
                 projectiles.clear();
                 shot_flash = 0.0;
@@ -148,6 +146,8 @@ fn main() {
             framebuffer.swap_buffers(
                 &mut window,
                 &raylib_thread,
+                player.pos,
+                block_size,
                 welcome_screen,
                 selected_level,
                 false,
@@ -163,7 +163,16 @@ fn main() {
             }
 
             framebuffer.clear();
-            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, true, false);
+            framebuffer.swap_buffers(
+                &mut window,
+                &raylib_thread,
+                player.pos,
+                block_size,
+                false,
+                selected_level,
+                true,
+                false,
+            );
             continue;
         }
 
@@ -176,7 +185,6 @@ fn main() {
                 pickups = spawn_pickups(selected_level, &maze, block_size);
                 player_health = 100;
                 ammo = 6;
-                has_key = false;
                 exit_unlocked = false;
                 projectiles.clear();
                 shot_flash = 0.0;
@@ -187,7 +195,16 @@ fn main() {
             }
 
             framebuffer.clear();
-            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false, true);
+            framebuffer.swap_buffers(
+                &mut window,
+                &raylib_thread,
+                player.pos,
+                block_size,
+                false,
+                selected_level,
+                false,
+                true,
+            );
             continue;
         }
 
@@ -200,7 +217,6 @@ fn main() {
             &mut pickups,
             &mut player_health,
             &mut ammo,
-            &mut has_key,
         ) {
             hit_sound.play();
         }
@@ -210,7 +226,6 @@ fn main() {
                 &player,
                 &mut maze,
                 &mut pickups,
-                &mut has_key,
                 &mut exit_unlocked,
                 block_size,
             )
@@ -342,6 +357,15 @@ fn main() {
             );
         }
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false, false);
+        framebuffer.swap_buffers(
+            &mut window,
+            &raylib_thread,
+            player.pos,
+            block_size,
+            false,
+            selected_level,
+            false,
+            false,
+        );
     }
 }

@@ -57,6 +57,8 @@ impl Framebuffer {
         &mut self,
         window: &mut RaylibHandle,
         raylib_thread: &RaylibThread,
+        player_position: Vector2,
+        block_size: usize,
         show_welcome: bool,
         selected_level: usize,
         show_success: bool,
@@ -142,6 +144,14 @@ impl Framebuffer {
                 renderer.draw_text("ENTER: reiniciar nivel", screen_width / 2 - 145, screen_height / 2 + 30, 24, Color::WHITE);
                 renderer.draw_text("L: elegir nivel", screen_width / 2 - 90, screen_height / 2 + 65, 20, Color::LIGHTGRAY);
             }
+
+            let cell_x = (player_position.x.max(0.0) as usize) / block_size.max(1);
+            let cell_y = (player_position.y.max(0.0) as usize) / block_size.max(1);
+            let coords = format!(
+                "POS: ({:.1}, {:.1})  CELDA: ({}, {})",
+                player_position.x, player_position.y, cell_x, cell_y
+            );
+            renderer.draw_text(&coords, 18, 18, 18, Color::WHITE);
 
             renderer.draw_fps(screen_width - 90, screen_height - 30);
         }

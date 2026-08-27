@@ -122,7 +122,6 @@ pub fn render_world(
             texture: match pickup.kind {
                 PickupKind::Health => 'h',
                 PickupKind::Ammo => 'a',
-                PickupKind::Key => 'k',
                 PickupKind::Switch => 'x',
             },
             size: block_size as f32 * 0.6,
