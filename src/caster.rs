@@ -11,6 +11,8 @@ pub struct Intersect {
     pub impact: char,
     pub cell_x: usize,
     pub cell_y: usize,
+    pub hit_x: f32,
+    pub hit_y: f32,
 }
 
 pub fn cast_ray(
@@ -38,6 +40,8 @@ pub fn cast_ray(
                 impact: '#',
                 cell_x: 0,
                 cell_y: 0,
+                hit_x: world_x,
+                hit_y: world_y,
             };
         }
 
@@ -53,6 +57,8 @@ pub fn cast_ray(
                 impact: '#',
                 cell_x: i,
                 cell_y: j,
+                hit_x: world_x,
+                hit_y: world_y,
             };
         }
 
@@ -62,6 +68,8 @@ pub fn cast_ray(
                 impact: maze[j][i],
                 cell_x: i,
                 cell_y: j,
+                hit_x: world_x,
+                hit_y: world_y,
             };
         }
 

@@ -2,12 +2,14 @@ mod framebuffer;
 mod caster;
 mod player;
 mod input;
+mod textures;
 
 use caster::cast_ray;
 use framebuffer::Framebuffer;
 use input::process_events;
 use player::Player;
 use raylib::prelude::*;
+use textures::TextureManager;
 use std::f32::consts::PI;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -77,6 +79,7 @@ fn render_world(
     maze: &Maze,
     player: &Player,
     block_size: usize,
+    textures: &TextureManager,
 ) {
     let num_rays = framebuffer.width();
 
@@ -116,14 +119,6 @@ fn render_world(
         let distance_to_wall = intersect.distance * (player.a - a).cos(); // fish-eye correction
         let distance_to_projection_plane = hw / (player.fov / 2.0).tan(); // distance from the "camera"
 
-        if intersect.impact == 'g' {
-            framebuffer.set_current_color(Color::GRAY);
-        } else if (intersect.cell_x + intersect.cell_y) % 2 == 0 {
-            framebuffer.set_current_color(Color::BLUE);
-        } else {
-            framebuffer.set_current_color(Color::GREEN);
-        }
-
         // this ratio doesn't really matter as long as it is a function of distance
         let distance_to_wall = distance_to_wall.max(1.0);
         let stake_height =
@@ -134,9 +129,22 @@ fn render_world(
         let stake_bottom = (hh + (stake_height / 2.0))
             .min(framebuffer.height() as f32) as u32;
 
-        // Draw the stake directly in the framebuffer
-        for y in stake_top..stake_bottom {
-            framebuffer.set_pixel(i, y);
+        if let Some((texture_width, texture_height)) = textures.dimensions(intersect.impact) {
+            let hit_offset = if a.cos().abs() > a.sin().abs() {
+                intersect.hit_y.rem_euclid(block_size as f32)
+            } else {
+                intersect.hit_x.rem_euclid(block_size as f32)
+            };
+            let tx = (hit_offset / block_size as f32 * texture_width as f32) as u32;
+            let visible_height = (stake_bottom - stake_top).max(1);
+
+            // Draw the stake directly in the framebuffer using texture coordinates.
+            for y in stake_top..stake_bottom {
+                let ty = ((y - stake_top) as f32 / visible_height as f32
+                    * texture_height as f32) as u32;
+                framebuffer.set_current_color(textures.get_pixel_color(intersect.impact, tx, ty));
+                framebuffer.set_pixel(i, y);
+            }
         }
     }
 }
@@ -157,6 +165,7 @@ fn main() {
         window_height as u32,
         Color::BLACK,
     );
+    let textures = TextureManager::new(&mut window, &raylib_thread);
 
     let maze = load_maze("maze.txt");
 
@@ -207,7 +216,7 @@ fn main() {
                 );
             }
         } else {
-            render_world(&mut framebuffer, &maze, &player, block_size);
+            render_world(&mut framebuffer, &maze, &player, block_size, &textures);
         }
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
