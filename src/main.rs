@@ -123,6 +123,13 @@ fn render_minimap(
     }
 }
 
+fn player_reached_goal(player: &Player, maze: &Maze, block_size: usize) -> bool {
+    let column = player.pos.x as usize / block_size;
+    let row = player.pos.y as usize / block_size;
+
+    row < maze.len() && column < maze[row].len() && maze[row][column] == 'g'
+}
+
 fn render_world(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
@@ -268,6 +275,7 @@ fn main() {
     let mut mode_3d = false;
     let mut m_was_down = false;
     let mut welcome_screen = true;
+    let mut success_screen = false;
 
     while !window.window_should_close() {
         music.update_stream();
@@ -294,7 +302,19 @@ fn main() {
                 &raylib_thread,
                 welcome_screen,
                 selected_level,
+                false,
             );
+            continue;
+        }
+
+        if success_screen {
+            if window.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                welcome_screen = true;
+                success_screen = false;
+            }
+
+            framebuffer.clear();
+            framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, true);
             continue;
         }
 
@@ -303,6 +323,11 @@ fn main() {
 
         // 2. move the player on user input
         let shot_fired = process_events(&window, &mut player, &maze, block_size);
+
+        if player_reached_goal(&player, &maze, block_size) {
+            success_screen = true;
+            continue;
+        }
 
         if shot_fired && mode_3d {
             shoot_sound.play();
@@ -366,6 +391,6 @@ fn main() {
             render_minimap(&mut framebuffer, &maze, &player, block_size);
         }
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level);
+        framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false);
     }
 }

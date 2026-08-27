@@ -71,6 +71,7 @@ impl Framebuffer {
         raylib_thread: &RaylibThread,
         show_welcome: bool,
         selected_level: usize,
+        show_success: bool,
     ) {
         // we get the "new" data from the new buffer into texture
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
@@ -97,6 +98,16 @@ impl Framebuffer {
                 renderer.draw_text("Nivel 2", 350, 355, 22, level_two_color);
                 renderer.draw_text("Flechas arriba/abajo y ENTER para comenzar", 185, 420, 20, Color::WHITE);
                 renderer.draw_text("Mouse: girar | Clic izquierdo: disparar | M: vista 2D/3D", 135, 455, 16, Color::LIGHTGRAY);
+            } else if show_success {
+                renderer.draw_rectangle(
+                    0,
+                    0,
+                    self.width as i32,
+                    self.height as i32,
+                    Color::new(12, 35, 20, 255),
+                );
+                renderer.draw_text("NIVEL COMPLETADO", 180, 230, 48, Color::GREEN);
+                renderer.draw_text("Presiona ENTER para elegir otro nivel", 205, 330, 24, Color::WHITE);
             }
         }
     }

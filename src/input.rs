@@ -50,7 +50,10 @@ fn move_player(player: &mut Player, distance: f32, maze: &Maze, block_size: usiz
     let column = next_x as usize / block_size;
     let row = next_y as usize / block_size;
 
-    if row < maze.len() && column < maze[row].len() && maze[row][column] == ' ' {
+    if row < maze.len()
+        && column < maze[row].len()
+        && matches!(maze[row][column], ' ' | 'g')
+    {
         player.pos.x = next_x;
         player.pos.y = next_y;
     }
