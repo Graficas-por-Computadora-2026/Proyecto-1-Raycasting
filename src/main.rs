@@ -166,6 +166,7 @@ fn main() {
                 &raylib_thread,
                 welcome_screen,
                 selected_level,
+                highest_unlocked_level,
                 false,
                 false,
             );
@@ -184,6 +185,7 @@ fn main() {
                 &raylib_thread,
                 false,
                 selected_level,
+                highest_unlocked_level,
                 true,
                 false,
             );
@@ -215,6 +217,7 @@ fn main() {
                 &raylib_thread,
                 false,
                 selected_level,
+                highest_unlocked_level,
                 false,
                 true,
             );
@@ -380,6 +383,7 @@ fn main() {
             &raylib_thread,
             false,
             selected_level,
+            highest_unlocked_level,
             false,
             false,
         );

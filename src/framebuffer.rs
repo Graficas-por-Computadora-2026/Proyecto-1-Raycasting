@@ -70,6 +70,7 @@ impl Framebuffer {
         raylib_thread: &RaylibThread,
         show_welcome: bool,
         selected_level: usize,
+        highest_unlocked_level: usize,
         show_success: bool,
         show_defeat: bool,
     ) {
@@ -132,12 +133,9 @@ impl Framebuffer {
                 draw_dragon_ball_background(&mut renderer, screen_width, screen_height, Color::new(16, 36, 90, 255));
                 draw_centered_text(&mut renderer, "DROOM BALL SUPER", screen_width, screen_height / 3 - 20, 52, Color::ORANGE);
                 draw_centered_text(&mut renderer, "Selecciona un nivel", screen_width, screen_height / 2 - 20, 24, Color::WHITE);
-                let level_one_color = if selected_level == 0 { Color::YELLOW } else { Color::LIGHTGRAY };
-                let level_two_color = if selected_level == 1 { Color::YELLOW } else { Color::LIGHTGRAY };
-                let level_three_color = if selected_level == 2 { Color::YELLOW } else { Color::LIGHTGRAY };
-                draw_centered_text(&mut renderer, "Nivel 1", screen_width, screen_height / 2 + 25, 22, level_one_color);
-                draw_centered_text(&mut renderer, "Nivel 2", screen_width, screen_height / 2 + 55, 22, level_two_color);
-                draw_centered_text(&mut renderer, "Nivel 3", screen_width, screen_height / 2 + 85, 22, level_three_color);
+                draw_level_option(&mut renderer, screen_width, screen_height / 2 + 25, 0, selected_level, highest_unlocked_level);
+                draw_level_option(&mut renderer, screen_width, screen_height / 2 + 65, 1, selected_level, highest_unlocked_level);
+                draw_level_option(&mut renderer, screen_width, screen_height / 2 + 105, 2, selected_level, highest_unlocked_level);
                 draw_centered_text(&mut renderer, "W/S y ENTER para comenzar", screen_width, screen_height / 2 + 145, 20, Color::WHITE);
                 draw_centered_text(&mut renderer, "W/S: mover | A/D o mouse: girar | ESPACIO: disparar | E: usar | M: vista 2D/3D", screen_width, screen_height / 2 + 180, 16, Color::LIGHTGRAY);
             } else if show_success {
@@ -215,6 +213,41 @@ fn draw_centered_text<D: RaylibDraw>(
     let text = CString::new(text).expect("Text must not contain null bytes");
     let width = unsafe { raylib::ffi::MeasureText(text.as_ptr(), font_size) };
     renderer.draw_text(text.to_str().unwrap(), (screen_width - width) / 2, y, font_size, color);
+}
+
+fn draw_level_option<D: RaylibDraw>(
+    renderer: &mut D,
+    screen_width: i32,
+    y: i32,
+    level: usize,
+    selected_level: usize,
+    highest_unlocked_level: usize,
+) {
+    let level_number = level + 1;
+    if level <= highest_unlocked_level {
+        let color = if selected_level == level {
+            Color::YELLOW
+        } else {
+            Color::SKYBLUE
+        };
+        draw_centered_text(
+            renderer,
+            &format!("Nivel {level_number} - DISPONIBLE"),
+            screen_width,
+            y,
+            22,
+            color,
+        );
+    } else {
+        draw_centered_text(
+            renderer,
+            &format!("Nivel {level_number} - BLOQUEADO: completa Nivel {level}"),
+            screen_width,
+            y,
+            18,
+            Color::GRAY,
+        );
+    }
 }
 
 fn draw_centered_texture<D: RaylibDraw>(
