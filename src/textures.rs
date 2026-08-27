@@ -13,12 +13,12 @@ impl TextureManager {
         let texture_files = vec![
             ('#', "assets/nivel1.png"),
             ('h', "assets/hermitaño.png"),
-            ('a', "assets/sprite.png"),
-            ('k', "assets/sprite.png"),
-            ('x', "assets/sprite.png"),
-            ('g', "assets/sprite.png"),
-            ('p', "assets/sprite.png"),
-            ('b', "assets/sprite.png"),
+            ('a', "assets/ki.png"),
+            ('k', "assets/sphere1.png"),
+            ('x', "assets/image.png"),
+            ('g', "assets/frieza.png"),
+            ('p', "assets/ki blast.png"),
+            ('b', "assets/jiren.png"),
         ];
 
         for (ch, path) in texture_files {
