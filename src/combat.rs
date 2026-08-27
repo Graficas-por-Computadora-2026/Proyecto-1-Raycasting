@@ -133,25 +133,27 @@ pub fn collect_pickups(
     pickups: &mut [Pickup],
     health: &mut i32,
     ammo: &mut i32,
-) -> bool {
+) -> Option<PickupKind> {
     const PICKUP_DISTANCE: f32 = 28.0;
-    let mut collected = false;
+    let mut collected_kind = None;
 
     for pickup in pickups {
         if !pickup.active || player.pos.distance_to(pickup.pos) > PICKUP_DISTANCE {
             continue;
         }
 
+        let kind = pickup.kind;
         match pickup.kind {
             PickupKind::Health => *health = (*health + 25).min(100),
             PickupKind::Ammo => *ammo = (*ammo + 6).min(MAX_AMMO),
             PickupKind::Switch => continue,
         }
         pickup.active = false;
-        collected = true;
+        collected_kind = Some(kind);
+        break;
     }
 
-    collected
+    collected_kind
 }
 
 pub fn interact_with_level(

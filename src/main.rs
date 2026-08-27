@@ -16,7 +16,10 @@ use hud::render_hud;
 use map_view::{draw_map_line, render_maze, render_minimap, world_to_map_position};
 use level::{load_maze, player_start_angle, player_start_position};
 use world_renderer::render_world;
-use combat::{collect_pickups, interact_with_level, spawn_enemies, spawn_pickups, update_enemies, update_projectiles, MAX_AMMO};
+use combat::{
+    collect_pickups, interact_with_level, spawn_enemies, spawn_pickups, update_enemies,
+    update_projectiles, PickupKind, MAX_AMMO,
+};
 pub use level::Maze;
 use input::process_events;
 use player::Player;
@@ -73,9 +76,21 @@ fn main() {
     let hit_sound = audio
         .new_sound("assets/hit.mp3")
         .expect("Failed to load hit sound");
+    let cure_sound = audio
+        .new_sound("assets/cura.mp3")
+        .expect("Failed to load cure sound");
+    let ki_sound = audio
+        .new_sound("assets/ki.mp3")
+        .expect("Failed to load ki sound");
+    let shenron_sound = audio
+        .new_sound("assets/shenron.mp3")
+        .expect("Failed to load shenron sound");
     music.set_volume(2.0);
     shoot_sound.set_volume(3.0);
     hit_sound.set_volume(3.0);
+    cure_sound.set_volume(3.0);
+    ki_sound.set_volume(3.0);
+    shenron_sound.set_volume(3.0);
     music.play_stream();
 
     let level_files = ["maps/mapa1.txt", "maps/mapa3.txt", "maps/mapa2.txt"];
@@ -206,13 +221,17 @@ fn main() {
         let delta_time = window.get_frame_time();
         shot_flash = (shot_flash - delta_time).max(0.0);
         let shot_fired = process_events(&window, &mut player, &maze, block_size);
-        if collect_pickups(
+        if let Some(kind) = collect_pickups(
             &player,
             &mut pickups,
             &mut player_health,
             &mut ammo,
         ) {
-            hit_sound.play();
+            match kind {
+                PickupKind::Health => cure_sound.play(),
+                PickupKind::Ammo => ki_sound.play(),
+                PickupKind::Switch => {}
+            }
         }
 
         if window.is_key_pressed(KeyboardKey::KEY_E)
@@ -224,10 +243,11 @@ fn main() {
                 block_size,
             )
         {
-            hit_sound.play();
+            shenron_sound.play();
         }
 
         if player_reached_goal(&player, &maze, &sprites, exit_unlocked, block_size) {
+            shenron_sound.play();
             success_screen = true;
             continue;
         }
