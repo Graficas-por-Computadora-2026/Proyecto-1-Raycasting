@@ -158,10 +158,10 @@ pub fn collect_pickups(
 
 pub fn interact_with_level(
     player: &Player,
-    maze: &mut Maze,
+    _maze: &mut Maze,
     pickups: &mut [Pickup],
     exit_unlocked: &mut bool,
-    block_size: usize,
+    _block_size: usize,
 ) -> bool {
     const INTERACTION_DISTANCE: f32 = 40.0;
 
