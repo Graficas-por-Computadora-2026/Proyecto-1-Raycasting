@@ -9,6 +9,8 @@ pub struct Sprite {
     pub texture: char,
     pub size: f32,
     pub active: bool,
+    pub health: i32,
+    pub attack_cooldown: f32,
 }
 
 pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) -> bool {
@@ -23,7 +25,10 @@ pub fn shoot_sprite(player: &Player, sprite: &mut Sprite, wall_distance: f32) ->
     let angular_radius = (sprite.size / 2.0 / distance.max(1.0)).atan();
 
     if angle_difference.abs() <= angular_radius && distance < wall_distance {
-        sprite.active = false;
+        sprite.health -= 1;
+        if sprite.health <= 0 {
+            sprite.active = false;
+        }
         return true;
     }
 

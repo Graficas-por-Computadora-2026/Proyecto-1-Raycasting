@@ -177,6 +177,106 @@ fn player_reached_goal(player: &Player, maze: &Maze, block_size: usize) -> bool 
     row < maze.len() && column < maze[row].len() && maze[row][column] == 'g'
 }
 
+fn spawn_enemy(block_size: usize) -> Sprite {
+    Sprite {
+        pos: Vector2::new(300.0, 75.0),
+        texture: 's',
+        size: block_size as f32,
+        active: true,
+        health: 3,
+        attack_cooldown: 0.0,
+    }
+}
+
+fn enemy_can_move(position: Vector2, maze: &Maze, block_size: usize) -> bool {
+    if position.x < 0.0 || position.y < 0.0 {
+        return false;
+    }
+
+    let column = position.x as usize / block_size;
+    let row = position.y as usize / block_size;
+    row < maze.len() && column < maze[row].len() && matches!(maze[row][column], ' ' | 'g')
+}
+
+fn update_enemies(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    sprites: &mut [Sprite],
+    block_size: usize,
+    delta_time: f32,
+) -> bool {
+    const ENEMY_SPEED: f32 = 25.0;
+    const ATTACK_DISTANCE: f32 = 40.0;
+    const ATTACK_DELAY: f32 = 1.0;
+
+    let mut player_hit = false;
+
+    for sprite in sprites {
+        if !sprite.active {
+            continue;
+        }
+
+        sprite.attack_cooldown = (sprite.attack_cooldown - delta_time).max(0.0);
+        let dx = player.pos.x - sprite.pos.x;
+        let dy = player.pos.y - sprite.pos.y;
+        let distance = (dx * dx + dy * dy).sqrt();
+        let angle_to_player = dy.atan2(dx);
+        let wall = cast_ray(
+            framebuffer,
+            maze,
+            player,
+            angle_to_player,
+            block_size,
+            false,
+        );
+
+        // The enemy only reacts when the player is in direct line of sight.
+        if distance >= wall.distance {
+            continue;
+        }
+
+        if distance > ATTACK_DISTANCE {
+            let step = (ENEMY_SPEED * delta_time).min(distance - ATTACK_DISTANCE);
+            let next_position = Vector2::new(
+                sprite.pos.x + dx / distance * step,
+                sprite.pos.y + dy / distance * step,
+            );
+
+            if enemy_can_move(next_position, maze, block_size) {
+                sprite.pos = next_position;
+            }
+        } else if sprite.attack_cooldown == 0.0 {
+            sprite.attack_cooldown = ATTACK_DELAY;
+            player_hit = true;
+        }
+    }
+
+    player_hit
+}
+
+fn render_health_bar(framebuffer: &mut Framebuffer, health: i32) {
+    const WIDTH: u32 = 160;
+    const HEIGHT: u32 = 14;
+    const X: u32 = 18;
+    const Y: u32 = 18;
+    let filled_width = (health.clamp(0, 100) as u32 * WIDTH) / 100;
+
+    framebuffer.set_current_color(Color::DARKGRAY);
+    for y in Y..Y + HEIGHT {
+        for x in X..X + WIDTH {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+
+    framebuffer.set_current_color(Color::RED);
+    for y in Y..Y + HEIGHT {
+        for x in X..X + filled_width {
+            framebuffer.set_pixel(x, y);
+        }
+    }
+}
+
 fn render_world(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
@@ -329,12 +429,8 @@ fn main() {
         a: 0.0,
         fov: PI / 3.0,
     };
-    let mut sprites = [Sprite {
-        pos: Vector2::new(300.0, 75.0),
-        texture: 's',
-        size: block_size as f32,
-        active: true,
-    }];
+    let mut sprites = [spawn_enemy(block_size)];
+    let mut player_health = 100;
 
     let mut mode_3d = false;
     let mut m_was_down = false;
@@ -370,7 +466,8 @@ fn main() {
                 maze = load_maze(level_files[selected_level]);
                 player.pos = Vector2::new(75.0, 75.0);
                 player.a = 0.0;
-                sprites[0].active = true;
+                sprites[0] = spawn_enemy(block_size);
+                player_health = 100;
                 welcome_screen = false;
             }
 
@@ -423,6 +520,27 @@ fn main() {
                 if shoot_sprite(&player, sprite, wall.distance) {
                     hit_sound.play();
                 }
+            }
+        }
+
+        if mode_3d
+            && update_enemies(
+                &mut framebuffer,
+                &maze,
+                &player,
+                &mut sprites,
+                block_size,
+                window.get_frame_time(),
+            )
+        {
+            player_health = (player_health - 10).max(0);
+            hit_sound.play();
+
+            if player_health == 0 {
+                player.pos = Vector2::new(75.0, 75.0);
+                player.a = 0.0;
+                player_health = 100;
+                sprites[0] = spawn_enemy(block_size);
             }
         }
 
@@ -485,6 +603,7 @@ fn main() {
                 window.get_time() as f32,
             );
             render_minimap(&mut framebuffer, &maze, &player, block_size);
+            render_health_bar(&mut framebuffer, player_health);
         }
 
         framebuffer.swap_buffers(&mut window, &raylib_thread, false, selected_level, false);
