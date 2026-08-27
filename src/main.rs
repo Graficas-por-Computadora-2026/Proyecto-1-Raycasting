@@ -73,9 +73,9 @@ fn main() {
     let hit_sound = audio
         .new_sound("assets/hit.mp3")
         .expect("Failed to load hit sound");
-    music.set_volume(0.08);
-    shoot_sound.set_volume(0.85);
-    hit_sound.set_volume(0.85);
+    music.set_volume(2.0);
+    shoot_sound.set_volume(3.0);
+    hit_sound.set_volume(3.0);
     music.play_stream();
 
     let level_files = ["maps/mapa1.txt", "maps/mapa3.txt", "maps/mapa2.txt"];
@@ -146,8 +146,6 @@ fn main() {
             framebuffer.swap_buffers(
                 &mut window,
                 &raylib_thread,
-                player.pos,
-                block_size,
                 welcome_screen,
                 selected_level,
                 false,
@@ -166,8 +164,6 @@ fn main() {
             framebuffer.swap_buffers(
                 &mut window,
                 &raylib_thread,
-                player.pos,
-                block_size,
                 false,
                 selected_level,
                 true,
@@ -198,8 +194,6 @@ fn main() {
             framebuffer.swap_buffers(
                 &mut window,
                 &raylib_thread,
-                player.pos,
-                block_size,
                 false,
                 selected_level,
                 false,
@@ -360,8 +354,6 @@ fn main() {
         framebuffer.swap_buffers(
             &mut window,
             &raylib_thread,
-            player.pos,
-            block_size,
             false,
             selected_level,
             false,
