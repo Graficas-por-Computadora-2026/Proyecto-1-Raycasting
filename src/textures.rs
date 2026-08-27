@@ -16,7 +16,8 @@ impl TextureManager {
         };
 
         let texture_files = vec![
-            ('#', "assets/nivel1.png"),
+            ('#', "assets/deadline.png"),
+            ('w', "assets/nivel1.png"),
             ('c', "assets/sky.png"),
             ('h', "assets/hermitaño.png"),
             ('a', "assets/ki.png"),
@@ -53,6 +54,38 @@ impl TextureManager {
             .get(&ch)
             .or_else(|| self.images.get(&'#'))
             .map(|image| (image.width as u32, image.height as u32))
+    }
+
+    pub fn get_cell_pixel_color(
+        &self,
+        ch: char,
+        cell_x: usize,
+        cell_y: usize,
+        tx: u32,
+        ty: u32,
+    ) -> Color {
+        self.get_pixel_color(self.texture_key(ch, cell_x, cell_y), tx, ty)
+    }
+
+    pub fn cell_dimensions(
+        &self,
+        ch: char,
+        cell_x: usize,
+        cell_y: usize,
+    ) -> Option<(u32, u32)> {
+        self.dimensions(self.texture_key(ch, cell_x, cell_y))
+    }
+
+    fn texture_key(&self, ch: char, cell_x: usize, cell_y: usize) -> char {
+        if matches!(ch, '+' | '-' | '|' | 'D' | '#') {
+            if (cell_x + cell_y).is_multiple_of(2) {
+                '#'
+            } else {
+                'w'
+            }
+        } else {
+            ch
+        }
     }
 }
 

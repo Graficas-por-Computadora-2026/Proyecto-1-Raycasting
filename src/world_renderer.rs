@@ -94,7 +94,11 @@ pub fn render_world(
         let stake_bottom = projected_bottom
             .min(framebuffer.height() as f32) as u32;
 
-        if let Some((texture_width, texture_height)) = textures.dimensions(intersect.impact) {
+        if let Some((texture_width, texture_height)) = textures.cell_dimensions(
+            intersect.impact,
+            intersect.cell_x,
+            intersect.cell_y,
+        ) {
             let hit_offset = if intersect.hit_vertical {
                 intersect.hit_y.rem_euclid(block_size as f32)
             } else {
@@ -105,7 +109,13 @@ pub fn render_world(
             for y in stake_top..stake_bottom {
                 let ty = ((y as f32 - projected_top) / stake_height
                     * texture_height as f32) as u32;
-                framebuffer.set_current_color(textures.get_pixel_color(intersect.impact, tx, ty));
+                framebuffer.set_current_color(textures.get_cell_pixel_color(
+                    intersect.impact,
+                    intersect.cell_x,
+                    intersect.cell_y,
+                    tx,
+                    ty,
+                ));
                 framebuffer.set_pixel(i, y);
             }
         }

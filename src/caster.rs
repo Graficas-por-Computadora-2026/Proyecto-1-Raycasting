@@ -9,6 +9,8 @@ use crate::Maze;
 pub struct Intersect {
     pub distance: f32,
     pub impact: char,
+    pub cell_x: usize,
+    pub cell_y: usize,
     pub hit_x: f32,
     pub hit_y: f32,
     pub hit_vertical: bool,
@@ -81,6 +83,8 @@ pub fn cast_ray(
             return Intersect {
                 distance,
                 impact: '#',
+                cell_x: cell_x.max(0) as usize,
+                cell_y: cell_y.max(0) as usize,
                 hit_x,
                 hit_y,
                 hit_vertical,
@@ -100,6 +104,8 @@ pub fn cast_ray(
             return Intersect {
                 distance,
                 impact,
+                cell_x: cell_x as usize,
+                cell_y: cell_y as usize,
                 hit_x,
                 hit_y,
                 hit_vertical,

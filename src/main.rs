@@ -157,10 +157,7 @@ fn main() {
                 projectiles.clear();
                 shot_flash = 0.0;
                 welcome_screen = false;
-                success_screen = selected_level == level_files.len() - 1;
-                if success_screen {
-                    shenron_sound.play();
-                }
+                success_screen = false;
             }
 
             framebuffer.clear();

@@ -14,6 +14,8 @@ fn draw_cell(
     y_start: u32,
     x_end: u32,
     y_end: u32,
+    cell_x: usize,
+    cell_y: usize,
     cell: char,
 ) {
     let color = match cell {
@@ -27,10 +29,10 @@ fn draw_cell(
         for x in x_start..x_end {
             if matches!(cell, ' ' | 'p' | 'g') {
                 framebuffer.set_current_color(color);
-            } else if let Some((texture_width, texture_height)) = textures.dimensions(cell) {
+            } else if let Some((texture_width, texture_height)) = textures.cell_dimensions(cell, cell_x, cell_y) {
                 let tx = ((x - x_start) * texture_width / (x_end - x_start).max(1)) as u32;
                 let ty = ((y - y_start) * texture_height / (y_end - y_start).max(1)) as u32;
-                framebuffer.set_current_color(textures.get_pixel_color(cell, tx, ty));
+                framebuffer.set_current_color(textures.get_cell_pixel_color(cell, cell_x, cell_y, tx, ty));
             }
             framebuffer.set_pixel(x, y);
         }
@@ -60,6 +62,8 @@ pub fn render_maze(
                 y_start,
                 x_end,
                 y_end,
+                col_index,
+                row_index,
                 cell,
             );
         }
