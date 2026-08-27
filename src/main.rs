@@ -65,13 +65,13 @@ fn main() {
     let audio = RaylibAudio::init_audio_device().expect("Failed to initialize audio");
     audio.set_audio_stream_buffer_size_default(65_536);
     let music = audio
-        .new_music("assets/guichin.mp3")
+        .new_music("assets/holdontight.mp3")
         .expect("Failed to load background music");
     let shoot_sound = audio
-        .new_sound("assets/shoot.wav")
+        .new_sound("assets/shoot.mp3")
         .expect("Failed to load shoot sound");
     let hit_sound = audio
-        .new_sound("assets/hit.wav")
+        .new_sound("assets/hit.mp3")
         .expect("Failed to load hit sound");
     music.set_volume(0.08);
     shoot_sound.set_volume(0.85);

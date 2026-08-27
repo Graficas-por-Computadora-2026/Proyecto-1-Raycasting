@@ -11,7 +11,7 @@ impl TextureManager {
         let mut images = HashMap::new();
 
         let texture_files = vec![
-            ('#', "assets/wall.png"),
+            ('#', "assets/nivel1.png"),
             ('s', "assets/sprite.png"),
         ];
 
