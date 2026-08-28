@@ -4,6 +4,8 @@ use std::slice;
 
 pub struct TextureManager {
     images: HashMap<char, Image>,
+    wall_textures: Vec<Image>,
+    wall_texture_offset: usize,
 }
 
 impl TextureManager {
@@ -34,7 +36,18 @@ impl TextureManager {
             images.insert(ch, image);
         }
 
-        TextureManager { images }
+        let wall_texture_paths = ["assets/deadline.png", "assets/nivel1.png"];
+        let wall_textures = wall_texture_paths
+            .iter()
+            .map(|path| Image::load_image(path).unwrap_or_else(|_| panic!("Failed to load image {path}")))
+            .collect::<Vec<_>>();
+        let wall_texture_offset = level % wall_textures.len().max(1);
+
+        TextureManager {
+            images,
+            wall_textures,
+            wall_texture_offset,
+        }
     }
 
     pub fn get_pixel_color(&self, ch: char, tx: u32, ty: u32) -> Color {
@@ -56,36 +69,34 @@ impl TextureManager {
             .map(|image| (image.width as u32, image.height as u32))
     }
 
-    pub fn get_cell_pixel_color(
+    pub fn wall_dimensions_for_cell(&self, cell_x: usize, cell_y: usize) -> Option<(u32, u32)> {
+        self.wall_texture_for_cell(cell_x, cell_y)
+            .map(|image| (image.width as u32, image.height as u32))
+    }
+
+    pub fn get_wall_pixel_color_for_cell(
         &self,
-        ch: char,
         cell_x: usize,
         cell_y: usize,
         tx: u32,
         ty: u32,
     ) -> Color {
-        self.get_pixel_color(self.texture_key(ch, cell_x, cell_y), tx, ty)
+        let Some(image) = self.wall_texture_for_cell(cell_x, cell_y) else {
+            return Color::WHITE;
+        };
+
+        let x = tx.min(image.width as u32 - 1) as i32;
+        let y = ty.min(image.height as u32 - 1) as i32;
+        get_pixel_color(image, x, y)
     }
 
-    pub fn cell_dimensions(
-        &self,
-        ch: char,
-        cell_x: usize,
-        cell_y: usize,
-    ) -> Option<(u32, u32)> {
-        self.dimensions(self.texture_key(ch, cell_x, cell_y))
-    }
-
-    fn texture_key(&self, ch: char, cell_x: usize, cell_y: usize) -> char {
-        if matches!(ch, '+' | '-' | '|' | 'D' | '#') {
-            if (cell_x + cell_y).is_multiple_of(2) {
-                '#'
-            } else {
-                'w'
-            }
-        } else {
-            ch
+    fn wall_texture_for_cell(&self, cell_x: usize, cell_y: usize) -> Option<&Image> {
+        if self.wall_textures.is_empty() {
+            return None;
         }
+
+        let index = (self.wall_texture_offset + cell_x + cell_y) % self.wall_textures.len();
+        self.wall_textures.get(index)
     }
 }
 

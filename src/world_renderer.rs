@@ -19,7 +19,7 @@ pub fn render_world(
     sprites: &[Sprite],
     pickups: &[Pickup],
     projectiles: &[Projectile],
-    time: f32,
+    frame_index: usize,
     shot_flash: bool,
 ) {
     let num_rays = framebuffer.width();
@@ -94,8 +94,7 @@ pub fn render_world(
         let stake_bottom = projected_bottom
             .min(framebuffer.height() as f32) as u32;
 
-        if let Some((texture_width, texture_height)) = textures.cell_dimensions(
-            intersect.impact,
+        if let Some((texture_width, texture_height)) = textures.wall_dimensions_for_cell(
             intersect.cell_x,
             intersect.cell_y,
         ) {
@@ -109,8 +108,7 @@ pub fn render_world(
             for y in stake_top..stake_bottom {
                 let ty = ((y as f32 - projected_top) / stake_height
                     * texture_height as f32) as u32;
-                framebuffer.set_current_color(textures.get_cell_pixel_color(
-                    intersect.impact,
+                framebuffer.set_current_color(textures.get_wall_pixel_color_for_cell(
                     intersect.cell_x,
                     intersect.cell_y,
                     tx,
@@ -128,7 +126,7 @@ pub fn render_world(
             sprite,
             textures,
             &z_buffer,
-            time,
+            frame_index as f32,
             Color::WHITE,
         );
     }
@@ -157,7 +155,7 @@ pub fn render_world(
             &pickup_sprite,
             textures,
             &z_buffer,
-            time,
+            frame_index as f32,
             Color::WHITE,
         );
     }
@@ -182,7 +180,7 @@ pub fn render_world(
             &projectile_sprite,
             textures,
             &z_buffer,
-            time,
+            frame_index as f32,
             Color::WHITE,
         );
     }
