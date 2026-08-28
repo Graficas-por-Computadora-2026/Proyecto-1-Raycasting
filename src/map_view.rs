@@ -105,6 +105,7 @@ pub fn render_minimap(
     player: &Player,
     sprites: &[Sprite],
     pickups: &[Pickup],
+    level: usize,
     block_size: usize,
 ) {
     const MARGIN: u32 = 12;
@@ -186,9 +187,13 @@ pub fn render_minimap(
         );
     }
 
-    for pickup in pickups.iter().filter(|pickup| {
-        pickup.active && matches!(pickup.kind, PickupKind::Switch)
-    }) {
+    for pickup in pickups.iter().filter(|pickup| pickup.active) {
+        let (color, radius) = match pickup.kind {
+            PickupKind::Switch => (Color::ORANGE, 3),
+            PickupKind::Health if level == 2 => (Color::LIME, 2),
+            PickupKind::Ammo if level == 2 => (Color::YELLOW, 2),
+            _ => continue,
+        };
         draw_world_marker(
             framebuffer,
             pickup.pos,
@@ -199,8 +204,8 @@ pub fn render_minimap(
             margin_y,
             width,
             height,
-            Color::ORANGE,
-            3,
+            color,
+            radius,
         );
     }
 

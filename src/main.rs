@@ -369,7 +369,15 @@ fn main() {
                 frame_index,
                 shot_flash > 0.0,
             );
-            render_minimap(&mut framebuffer, &maze, &player, &sprites, &pickups, block_size);
+            render_minimap(
+                &mut framebuffer,
+                &maze,
+                &player,
+                &sprites,
+                &pickups,
+                selected_level,
+                block_size,
+            );
             render_hud(
                 &mut framebuffer,
                 player_health,
