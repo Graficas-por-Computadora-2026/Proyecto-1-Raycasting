@@ -5,6 +5,10 @@ Ray caster pseudo-3D (estilo *Wolfenstein 3D* / DOOM) implementado en Rust con
 enemigos billboard, cápsulas de salud y ki, tres laberintos jugables y una
 mecánica de combate para activar la salida y llegar a la meta de Porunga.
 
+## Video
+
+**https://youtu.be/LyaE42f7A3Q**
+
 ## Screenshots
 
 ### Pantalla de bienvenida
@@ -140,4 +144,4 @@ maps/
 
 ## Autor
 
-Completa esta línea antes de entregar: **Luis Angel Girón Arévalo — 24753**.
+**Luis Angel Girón Arévalo — 24753**.
