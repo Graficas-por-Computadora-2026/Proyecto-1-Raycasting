@@ -110,6 +110,7 @@ fn main() {
     let mut exit_unlocked = false;
     let mut projectiles = Vec::new();
     let mut shot_flash = 0.0;
+    let mut frame_index: usize = 0;
 
     let mut mode_3d = false;
     let mut m_was_down = false;
@@ -365,7 +366,7 @@ fn main() {
                 &sprites,
                 &pickups,
                 &projectiles,
-                window.get_time() as f32,
+                frame_index,
                 shot_flash > 0.0,
             );
             render_minimap(&mut framebuffer, &maze, &player, &sprites, &pickups, block_size);
@@ -387,5 +388,6 @@ fn main() {
             false,
             false,
         );
+        frame_index = frame_index.wrapping_add(1);
     }
 }
