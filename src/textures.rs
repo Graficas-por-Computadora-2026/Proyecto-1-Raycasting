@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 use std::collections::HashMap;
+use std::fs;
 use std::slice;
 
 pub struct TextureManager {
@@ -34,11 +35,7 @@ impl TextureManager {
             images.insert(ch, image);
         }
 
-        let wall_texture_paths = ["assets/deadline.png", "assets/nivel1.png"];
-        let wall_textures = wall_texture_paths
-            .iter()
-            .map(|path| Image::load_image(path).unwrap_or_else(|_| panic!("Failed to load image {path}")))
-            .collect::<Vec<_>>();
+        let wall_textures = load_images_from_folder("assets/wall");
         let wall_texture_offset = level % wall_textures.len().max(1);
 
         TextureManager {
@@ -120,4 +117,36 @@ fn get_pixel_color(image: &Image, x: i32, y: i32) -> Color {
 
         Color::new(data[idx], data[idx + 1], data[idx + 2], data[idx + 3])
     }
+}
+
+fn load_images_from_folder(folder_path: &str) -> Vec<Image> {
+    let Ok(entries) = fs::read_dir(folder_path) else {
+        panic!("Failed to read folder {folder_path}");
+    };
+
+    let mut image_paths = entries
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| {
+            path.extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("png"))
+        })
+        .collect::<Vec<_>>();
+
+    image_paths.sort();
+
+    if image_paths.is_empty() {
+        panic!("No PNG files found in folder {folder_path}");
+    }
+
+    image_paths
+        .iter()
+        .map(|path| {
+            let path_str = path
+                .to_str()
+                .unwrap_or_else(|| panic!("Invalid UTF-8 path in folder {folder_path}"));
+            Image::load_image(path_str)
+                .unwrap_or_else(|_| panic!("Failed to load image {path_str}"))
+        })
+        .collect()
 }
